@@ -1,0 +1,13 @@
+node_modules/
+dist/
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/prisma/test.db
+backend/prisma/test.db-journal
+backend/.env
+frontend/.env
+*.log
+.DS_Store
+
+# Source reference material (not part of the application, kept local only)
+*.pdf

@@ -1,0 +1,738 @@
+// Kalvium Project Defence Progress Tracker — Data Model
+//
+// Provider note: SQLite is used for local development/tests because it needs no
+// external service to run (see DEPLOYMENT.md to switch to PostgreSQL for prod).
+// SQLite does not support native Prisma enums, so all "enum-like" fields are
+// modeled as String columns whose allowed values are defined and validated in
+// backend/src/domain/constants/enums.ts (single source of truth, shared by
+// every service and by zod request validation). This also means switching the
+// datasource provider later does not require touching every enum field.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Auth / actors
+// ------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String // ADMIN | TEACHING_NINJA | GROWTH_COACH (see Role enum)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditEvents         AuditEvent[]
+  projectReviews      ProjectReview[]
+  videoEvaluations    VideoQuestionEvaluation[]
+  interviewsGiven     Interview[]               @relation("InterviewerUser")
+  interviewEvals      InterviewEvaluation[]
+  deliverableVerifies DeliverableAssignment[]  @relation("DeliverableVerifiedBy")
+  growthCoachEvals    GrowthCoachEvaluation[]
+  flagsCreated        Flag[]                    @relation("FlagCreatedBy")
+  flagsResolved       Flag[]                    @relation("FlagResolvedBy")
+  graduationDecisions GraduationDecision[]
+  emailEventsSent     EmailEvent[]
+  trackTransitions    TrackTransition[]
+  cohortEnrollments   CohortEnrollment[]
+  deliverableAssigned DeliverableAssignment[]   @relation("DeliverableCreatedBy")
+  studentsCreated     Student[]                 @relation("StudentCreatedBy")
+
+  @@index([role])
+}
+
+// ------------------------------------------------------------------
+// Reference / lookup data
+// ------------------------------------------------------------------
+
+model Campus {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students     Student[]
+  cohorts      Cohort[]
+  growthCoaches GrowthCoach[]
+}
+
+model GrowthCoach {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  campusId  String?
+  campus    Campus?  @relation(fields: [campusId], references: [id])
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students             Student[]
+  growthCoachEvaluations GrowthCoachEvaluation[]
+
+  @@index([campusId])
+}
+
+model Cohort {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  description String?
+  campusId    String?
+  campus      Campus?   @relation(fields: [campusId], references: [id])
+  startDate   DateTime?
+  endDate     DateTime?
+  status      String    @default("ACTIVE") // ACTIVE | ARCHIVED | INACTIVE
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  enrollments CohortEnrollment[]
+
+  @@index([campusId])
+  @@index([status])
+}
+
+// ------------------------------------------------------------------
+// Student + cohort history
+// ------------------------------------------------------------------
+
+model Student {
+  id                String   @id @default(cuid())
+  fullName          String
+  email             String   @unique
+  phone             String?
+  campusId          String?
+  campus            Campus?  @relation(fields: [campusId], references: [id])
+  growthCoachId     String?
+  growthCoach       GrowthCoach? @relation(fields: [growthCoachId], references: [id])
+
+  // Null means the student has not yet been routed by a completed Project
+  // Review (ONBOARDING). Modeling this as a real null rather than defaulting
+  // to "A" avoids a fake initial track colliding with real transition rules.
+  currentTrack      String? // A | A1 | A2 | B (Track enum); null = not yet routed
+  currentStage      String   @default("PROJECT_REVIEW") // Stage enum
+  programStatus     String   @default("ONBOARDING") // ProgramStatus enum
+
+  chosenProject     String?
+  resumeReference   String?
+  notes             String?
+
+  createdById       String?
+  createdBy         User?    @relation("StudentCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  cohortEnrollments   CohortEnrollment[]
+  projectReviews      ProjectReview[]
+  videoAssignments    VideoAssignment[]
+  interviews          Interview[]
+  deliverableAssignments DeliverableAssignment[]
+  checkpoints         Checkpoint[]
+  growthCoachEvaluations GrowthCoachEvaluation[]
+  flags               Flag[]
+  graduationDecisions GraduationDecision[]
+  trackTransitions    TrackTransition[]
+  emailRecipients     EmailRecipient[]
+
+  @@index([campusId])
+  @@index([growthCoachId])
+  @@index([currentTrack])
+  @@index([programStatus])
+}
+
+// A student's membership in a cohort over time. History is never overwritten —
+// moving cohorts ends the active enrollment and starts a new one.
+model CohortEnrollment {
+  id         String    @id @default(cuid())
+  studentId  String
+  student    Student   @relation(fields: [studentId], references: [id])
+  cohortId   String
+  cohort     Cohort    @relation(fields: [cohortId], references: [id])
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  isActive   Boolean   @default(true)
+  reason     String?
+  createdById String?
+  createdBy  User?     @relation(fields: [createdById], references: [id])
+  createdAt  DateTime  @default(now())
+
+  trackTransitions        TrackTransition[]
+  projectReviews          ProjectReview[]
+  videoAssignments        VideoAssignment[]
+  interviews              Interview[]
+  deliverableAssignments  DeliverableAssignment[]
+  checkpoints             Checkpoint[]
+  growthCoachEvaluations  GrowthCoachEvaluation[]
+  graduationDecisions     GraduationDecision[]
+
+  @@index([studentId])
+  @@index([cohortId])
+  @@index([studentId, isActive])
+}
+
+// Every track/stage/status movement is recorded here — this is the backbone
+// of the student timeline and must never be edited or deleted after creation.
+model TrackTransition {
+  id                   String   @id @default(cuid())
+  studentId            String
+  student              Student  @relation(fields: [studentId], references: [id])
+  cohortEnrollmentId   String?
+  cohortEnrollment     CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
+
+  fromTrack            String?
+  toTrack               String
+  fromStage            String?
+  toStage              String
+  fromProgramStatus    String?
+  toProgramStatus      String
+
+  reason               String
+  sourceType           String   // AUTOMATIC | MANUAL | OVERRIDE
+  overrideReason        String?
+
+  relatedEvaluationType String? // PROJECT_REVIEW | VIDEO_ASSESSMENT | GROWTH_COACH_EVALUATION | INTERVIEW | GRADUATION_DECISION
+  relatedEvaluationId   String?
+
+  notes                String?
+  actorId              String
+  actor                User     @relation(fields: [actorId], references: [id])
+  effectiveAt          DateTime @default(now())
+  createdAt            DateTime @default(now())
+
+  @@index([studentId])
+  @@index([cohortEnrollmentId])
+}
+
+// ------------------------------------------------------------------
+// Project / Resume Review
+// ------------------------------------------------------------------
+
+// Versioned rubric configuration. Historical reviews always point at the
+// version that was in force when they were scored, so changing policy later
+// never rewrites past decisions.
+model RubricVersion {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. PR_RUBRIC_V1
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  totalMax    Int      @default(50)
+  threshold   Int      @default(25)
+  dimensions  String   // JSON: [{key,label,maxScore,mandatory,mandatoryMin,order}]
+  createdAt   DateTime @default(now())
+
+  projectReviews ProjectReview[]
+}
+
+model ProjectReview {
+  id                 String   @id @default(cuid())
+  studentId          String
+  student            Student  @relation(fields: [studentId], references: [id])
+  cohortEnrollmentId String?
+  cohortEnrollment   CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
+  rubricVersionId    String
+  rubricVersion      RubricVersion @relation(fields: [rubricVersionId], references: [id])
+  reviewerId         String
+  reviewer           User     @relation(fields: [reviewerId], references: [id])
+
+  status             String   @default("DRAFT") // DRAFT | COMPLETED
+  totalScore         Int      @default(0)
+  thresholdPassed    Boolean?
+  mandatoryPassed    Boolean?
+  outcome            String? // TRACK_A | TRACK_B
+  outcomeReason      String?
+  triggeredMandatoryFailures String? // JSON array of dimension keys
+
+  reviewedAt         DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  scores             ProjectReviewScore[]
+
+  @@index([studentId])
+}
+
+model ProjectReviewScore {
+  id              String   @id @default(cuid())
+  projectReviewId String
+  projectReview   ProjectReview @relation(fields: [projectReviewId], references: [id])
+  dimensionKey    String
+  dimensionLabel  String
+  score           Int
+  maxScore        Int      @default(5)
+  isMandatory     Boolean  @default(false)
+  mandatoryMin    Int?
+  mandatoryPass   Boolean?
+  reason          String
+  order           Int      @default(0)
+
+  @@index([projectReviewId])
+}
+
+// ------------------------------------------------------------------
+// Video Question Bank + Assessment
+// ------------------------------------------------------------------
+
+model VideoQuestionSet {
+  id        String   @id @default(cuid())
+  key       String   @unique // e.g. TRACK_A_BASE
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  versions  VideoQuestionSetVersion[]
+}
+
+model VideoQuestionSetVersion {
+  id               String   @id @default(cuid())
+  questionSetId    String
+  questionSet      VideoQuestionSet @relation(fields: [questionSetId], references: [id])
+  versionNumber    Int
+  active           Boolean  @default(true)
+  totalMax         Int      @default(50)
+  threshold        Int      @default(25)
+  mandatoryQuestionKeys String // JSON array e.g. ["Q1","Q2","Q4","Q7","Q9"]
+  createdAt        DateTime @default(now())
+
+  questions        VideoQuestion[]
+  assignments      VideoAssignment[]
+
+  @@unique([questionSetId, versionNumber])
+}
+
+model VideoQuestion {
+  id                    String   @id @default(cuid())
+  questionSetVersionId  String
+  questionSetVersion    VideoQuestionSetVersion @relation(fields: [questionSetVersionId], references: [id])
+  questionKey           String   // Q1..Q10
+  questionNumber        Int
+  title                 String
+  questionText          String
+  marks                 Int      @default(5)
+  minTimeSeconds        Int?
+  listeningCriteria     String?
+  isMandatory           Boolean  @default(false)
+  order                 Int
+  active                Boolean  @default(true)
+
+  evaluations           VideoQuestionEvaluation[]
+
+  @@unique([questionSetVersionId, questionKey])
+  @@index([questionSetVersionId])
+}
+
+model VideoAssignment {
+  id                    String   @id @default(cuid())
+  studentId             String
+  student               Student  @relation(fields: [studentId], references: [id])
+  cohortEnrollmentId    String?
+  cohortEnrollment      CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
+  questionSetVersionId  String
+  questionSetVersion    VideoQuestionSetVersion @relation(fields: [questionSetVersionId], references: [id])
+
+  status                String   @default("ASSIGNED") // ASSIGNED | IN_PROGRESS | EVALUATION_COMPLETE
+  assignedAt            DateTime @default(now())
+  deadlineAt            DateTime?
+
+  totalScore            Int?
+  mandatoryPassed       Boolean?
+  outcome               String? // A1 | A2
+  outcomeReason         String?
+  finalizedAt           DateTime?
+  finalizedById         String?
+
+  createdById           String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  evaluations           VideoQuestionEvaluation[]
+  emailRecipients       EmailRecipient[]
+
+  @@index([studentId])
+}
+
+model VideoQuestionEvaluation {
+  id                String   @id @default(cuid())
+  videoAssignmentId String
+  videoAssignment   VideoAssignment @relation(fields: [videoAssignmentId], references: [id])
+  questionId        String
+  question          VideoQuestion @relation(fields: [questionId], references: [id])
+
+  submitted         Boolean  @default(false)
+  submittedAt       DateTime?
+  submissionReference String?
+
+  evaluated         Boolean  @default(false)
+  score             Int?
+  reviewerId        String?
+  reviewer          User?    @relation(fields: [reviewerId], references: [id])
+  notes             String?
+  reviewedAt        DateTime?
+
+  updatedAt         DateTime @updatedAt
+
+  @@unique([videoAssignmentId, questionId])
+  @@index([videoAssignmentId])
+}
+
+// ------------------------------------------------------------------
+// Interviews (A1 intensive + graduation)
+// ------------------------------------------------------------------
+
+model RungLevel {
+  id          String @id @default(cuid())
+  level       Int    @unique // 1-5
+  key         String @unique // R1..R5
+  label       String // Explanation, Justification, Trade-offs, Scaling, Failure
+  description String?
+  order       Int
+}
+
+model Interview {
+  id                    String   @id @default(cuid())
+  studentId             String
+  student               Student  @relation(fields: [studentId], references: [id])
+  cohortEnrollmentId    String?
+  cohortEnrollment      CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
+
+  interviewType         String   // MOCK | FINAL | GAP_CLOSURE | OTHER
+  sequenceNumber        Int      @default(1)
+
+  scheduledStart        DateTime?
+  scheduledEnd          DateTime?
+  timezone              String   @default("Asia/Kolkata")
+
+  interviewerId         String?
+  interviewer           User?    @relation("InterviewerUser", fields: [interviewerId], references: [id])
+  growthCoachConfirmationStatus String @default("NOT_REQUIRED")
+
+  chosenProject         String?
+  status                String   @default("SCHEDULED") // SCHEDULED|IN_PROGRESS|COMPLETED|CANCELLED|RESCHEDULED
+  actualStart           DateTime?
+  actualEnd             DateTime?
+  notes                 String?
+
+  createdById           String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  evaluation            InterviewEvaluation?
+  emailRecipients       EmailRecipient[]
+
+  @@index([studentId])
+}
+
+model InterviewEvaluation {
+  id                  String   @id @default(cuid())
+  interviewId         String   @unique
+  interview           Interview @relation(fields: [interviewId], references: [id])
+
+  highestRungHeld     Int?
+  breakRung           Int?
+  breakCauseCategory  String?  // TECHNICAL_DEPTH | COMMUNICATION | OWNERSHIP | SCALING | FAILURE_HANDLING | OTHER
+  breakCauseNotes     String?
+  evidence            String?
+  communicationRating Int?     // 1-5
+  prescription        String?
+  strengths           String?
+  weaknesses          String?
+  overallFeedback     String
+  result              String?  // ADVANCE | REPEAT | FAIL | INCONCLUSIVE
+
+  evaluatorId         String
+  evaluator           User     @relation(fields: [evaluatorId], references: [id])
+  evaluatedAt         DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([interviewId])
+}
+
+// ------------------------------------------------------------------
+// Deliverables (A2 + Track B) & Checkpoints
+// ------------------------------------------------------------------
+
+model DeliverableTemplate {
+  id                  String   @id @default(cuid())
+  key                 String   @unique
+  title               String
+  gapAddressed        String
+  whatStudentMustDo   String
+  expectedOutcome     String
+  submissionType      String   // LINK|TEXT|REPOSITORY|DOCUMENT_URL|VIDEO_URL|FILE_METADATA|OTHER_URL
+  // Free text describing the exact item required (e.g. "1 commit/PR link
+  // showing the completed change, with a 3-5 line caption") — the real
+  // operational workbook uses this as descriptive text, not a yes/no flag.
+  submissionRequired  String
+  submissionDetails   String?
+  verificationCriteria String
+  estimatedTime       String?
+  track               String   // A2 | B | BOTH
+  order               Int      @default(0)
+  active              Boolean  @default(true)
+  version             Int      @default(1)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  assignments         DeliverableAssignment[]
+}
+
+model DeliverableAssignment {
+  id                  String   @id @default(cuid())
+  studentId           String
+  student             Student  @relation(fields: [studentId], references: [id])
+  cohortEnrollmentId  String?
+  cohortEnrollment    CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
+  templateId          String
+  template            DeliverableTemplate @relation(fields: [templateId], references: [id])
+  templateSnapshot    String   // JSON snapshot of the template at assignment time (historical correctness)
+
+  track               String   // A2 | B
+  checkpointId        String?
+  checkpoint          Checkpoint? @relation(fields: [checkpointId], references: [id])
+
+  assignedAt          DateTime @default(now())
+  dueAt               DateTime?
+
+  submissionType      String
+  submissionFromStudent String?
+  submittedAt         DateTime?
+
+  verificationStatus  String   @default("PENDING") // PENDING|VERIFIED|REJECTED
+  verifiedAt          DateTime?
+  verifiedById        String?
+  verifiedBy          User?    @relation("DeliverableVerifiedBy", fields: [verifiedById], references: [id])
+  feedback            String?
+
+  status              String   @default("NOT_STARTED") // NOT_STARTED|IN_PROGRESS|SUBMITTED|VERIFIED|REJECTED|OVERDUE
+
+  createdById         String?
+  createdBy           User?    @relation("DeliverableCreatedBy", fields: [createdById], references: [id])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([checkpointId])
+}
+
+model Checkpoint {
+  id                    String   @id @default(cuid())
+  studentId             String
+  student               Student  @relation(fields: [studentId], references: [id])
+  cohortEnrollmentId    String?
+  cohortEnrollment      CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
+  track                 String   // A2 | B
+
+  name                  String
+  sequence              Int
+  dueAt                 DateTime?
+  expectedEvidence      String?
+  whatWillBeChecked     String?
+  expectedProgress      String?
+  status                String   @default("PENDING") // PENDING|IN_REVIEW|PASSED|FAILED
+  evaluationNotes       String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  deliverables          DeliverableAssignment[]
+
+  @@index([studentId])
+}
+
+// ------------------------------------------------------------------
+// Growth Coach evaluation (A2 / Track B progression gate)
+// ------------------------------------------------------------------
+
+model GrowthCoachEvaluation {
+  id                         String   @id @default(cuid())
+  studentId                  String
+  student                    Student  @relation(fields: [studentId], references: [id])
+  cohortEnrollmentId         String?
+  cohortEnrollment           CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
+  track                      String   // A2 | B
+
+  completion                 Int?     // 0-5
+  quality                    Int?     // 0-5
+  evidence                   String?
+  demonstratedImprovement    Int?     // 0-5
+  understanding              Int?     // 0-5
+  ownership                  Int?     // 0-5
+  abilityToExplain           Int?     // 0-5
+  foundationalGapsAddressed  Boolean?
+
+  decision                   String   // SUFFICIENT | NOT_SUFFICIENT
+  feedback                   String
+
+  evaluatorId                String?
+  evaluator                  GrowthCoach? @relation(fields: [evaluatorId], references: [id])
+  recordedById               String
+  recordedBy                 User     @relation(fields: [recordedById], references: [id])
+  evaluatedAt                DateTime @default(now())
+  createdAt                  DateTime @default(now())
+
+  @@index([studentId])
+}
+
+// ------------------------------------------------------------------
+// Graduation
+// ------------------------------------------------------------------
+
+model GraduationDecision {
+  id                   String   @id @default(cuid())
+  studentId            String
+  student              Student  @relation(fields: [studentId], references: [id])
+  cohortEnrollmentId   String?
+  cohortEnrollment     CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
+
+  decision             String   // GRADUATE | NOT_GRADUATE
+  reason               String
+  relatedInterviewIds  String?  // JSON array
+  resultingProgramStatus String // GRADUATED | FUTURE_PIPELINE
+
+  decidedById          String
+  decidedBy            User     @relation(fields: [decidedById], references: [id])
+  decidedAt            DateTime @default(now())
+
+  @@index([studentId])
+}
+
+// ------------------------------------------------------------------
+// Flags / concerns
+// ------------------------------------------------------------------
+
+model Flag {
+  id              String   @id @default(cuid())
+  studentId       String
+  student         Student  @relation(fields: [studentId], references: [id])
+  category        String   // TRANSCRIPT_CONCERN|SUSPICIOUS_SUBMISSION|MANIPULATED_EVIDENCE|PLAGIARISM_CONCERN|OWNERSHIP_CONCERN|INVALID_LINK|UNEXPLAINED_DOCUMENT|OTHER
+  severity        String   // LOW|MEDIUM|HIGH|CRITICAL
+  title           String
+  description     String
+  status          String   @default("OPEN") // OPEN | RESOLVED
+
+  createdById     String
+  createdBy       User     @relation("FlagCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+
+  resolvedById    String?
+  resolvedBy      User?    @relation("FlagResolvedBy", fields: [resolvedById], references: [id])
+  resolvedAt      DateTime?
+  resolutionNote  String?
+
+  @@index([studentId])
+  @@index([status])
+}
+
+// ------------------------------------------------------------------
+// Email system
+// ------------------------------------------------------------------
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  subject   String
+  bodyHtml  String
+  variables String   // JSON array of variable names usable in this template
+  active    Boolean  @default(true)
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events    EmailEvent[]
+}
+
+// One EmailEvent = one admin-triggered "send" action, possibly to many recipients.
+model EmailEvent {
+  id                String   @id @default(cuid())
+  templateId        String?
+  template          EmailTemplate? @relation(fields: [templateId], references: [id])
+  templateKeySnapshot String
+  subjectRendered   String?
+  relatedEntityType String?  // e.g. VideoAssignment | Interview | DeliverableAssignment | GraduationDecision
+  relatedEntityId   String?
+
+  status            String   @default("PENDING") // PENDING|SENT|PARTIAL|FAILED
+  triggeredById     String
+  triggeredBy       User     @relation(fields: [triggeredById], references: [id])
+  createdAt         DateTime @default(now())
+
+  recipients        EmailRecipient[]
+}
+
+model EmailRecipient {
+  id              String   @id @default(cuid())
+  emailEventId    String
+  emailEvent      EmailEvent @relation(fields: [emailEventId], references: [id])
+  studentId       String?
+  student         Student? @relation(fields: [studentId], references: [id])
+  emailAddress    String
+  bodyRendered    String
+  status          String   @default("PENDING") // PENDING|SENT|FAILED
+  sentAt          DateTime?
+
+  videoAssignmentId String?
+  videoAssignment    VideoAssignment? @relation(fields: [videoAssignmentId], references: [id])
+  interviewId        String?
+  interview          Interview? @relation(fields: [interviewId], references: [id])
+
+  attempts        EmailDeliveryAttempt[]
+
+  @@index([emailEventId])
+  @@index([studentId])
+}
+
+model EmailDeliveryAttempt {
+  id               String   @id @default(cuid())
+  emailRecipientId String
+  emailRecipient   EmailRecipient @relation(fields: [emailRecipientId], references: [id])
+  attemptNumber    Int      @default(1)
+  status           String   // SENT | FAILED
+  providerMessageId String?
+  errorMessage     String?
+  attemptedAt      DateTime @default(now())
+
+  @@index([emailRecipientId])
+}
+
+// ------------------------------------------------------------------
+// Audit trail (append-only)
+// ------------------------------------------------------------------
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  before     String?  // JSON
+  after      String?  // JSON
+  metadata   String?  // JSON
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+// ------------------------------------------------------------------
+// App-wide configuration (non-versioned operational knobs)
+// ------------------------------------------------------------------
+
+model AppSetting {
+  key         String   @id
+  value       String   // JSON
+  description String?
+  updatedAt   DateTime @updatedAt
+}
