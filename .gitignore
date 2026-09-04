@@ -11,3 +11,4 @@ frontend/.env
 
 # Source reference material (not part of the application, kept local only)
 *.pdf
+frontend/dist/

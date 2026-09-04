@@ -2,7 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../lib/asyncHandler";
 import { requireAuth, requireRole } from "../middleware/auth";
-import { PROGRAM_STATUS, TRACK } from "../domain/constants/enums";
+import { PROGRAM_STATUS, STAGE, TRACK } from "../domain/constants/enums";
+import { recordTrackTransition } from "../domain/services/trackTransition.service";
 import { createStudent, getStudentSummary, listStudents, updateStudent } from "../domain/services/student.service";
 import { getCohortEnrollmentHistory } from "../domain/services/cohort.service";
 import { getStudentTimeline } from "../domain/services/timeline.service";
@@ -142,6 +143,27 @@ studentRouter.get(
   "/:id/timeline",
   asyncHandler(async (req, res) => {
     res.json({ data: await getStudentTimeline(req.params.id) });
+  }),
+);
+
+// Manual "Move Student" action (spec section 66). Automatic transitions
+// triggered by domain services (Project Review, Video, Growth Coach,
+// Graduation) never go through this route — only deliberate Admin action.
+studentRouter.post(
+  "/:id/track-transition",
+  asyncHandler(async (req, res) => {
+    const schema = z.object({
+      toTrack: z.enum(TRACK),
+      toStage: z.enum(STAGE),
+      toProgramStatus: z.enum(PROGRAM_STATUS),
+      reason: z.string().min(8),
+      sourceType: z.enum(["MANUAL", "OVERRIDE"]),
+      overrideReason: z.string().optional(),
+      notes: z.string().optional(),
+    });
+    const input = schema.parse(req.body);
+    const transition = await recordTrackTransition({ ...input, studentId: req.params.id, actorId: req.user!.id });
+    res.status(201).json({ data: transition });
   }),
 );
 
