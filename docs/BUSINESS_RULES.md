@@ -19,8 +19,8 @@ persisted.
 Onboarding → Project Review → Track A / Track B
 Track A → Orientation → 10 Video Questions → Evaluation → A1 / A2
 A1 → Day1 Gap Closure → Day2 Task → Day3 Mock → Day4 Feedback → Day5 Final → Graduation Decision
-A2 → Feedback → Deliverables → Checkpoints → Growth Coach → A1 (direct) or continue A2
-Track B → Feedback+Plan → Deliverables → Checkpoints → Growth Coach → Track A (via Video) or continue B
+A2 → Feedback → Deliverables → Growth Coach → A1 (direct) or continue A2
+Track B → Feedback+Plan → Deliverables → Growth Coach → Track A (via Video) or continue B
 ```
 
 A2 and Track B are **not exits**. `RecordGrowthCoachEvaluation` can be
@@ -90,15 +90,24 @@ pass. Otherwise A2.
 
 ## 4. Interview rung model (`interview.service.ts`)
 
-The program's 5-Level Ladder:
+**Corrected 2026-09-09:** the program's actual live scoring workbook
+("Database Ninja Interface" source doc, Interview sheet) uses a 4-level
+rung scale, not the 5-level narrative ladder in the planning doc:
 
 | Rung | Name | Demonstrates |
 |---|---|---|
 | R1 | Explain | What the project does, the problem, the student's role |
-| R2 | Implement | How it was built — architecture, APIs, DB, auth, code flow |
-| R3 | Justify | Why a technology/architecture/approach was chosen |
-| R4 | Tradeoff | Comparison against alternatives |
-| R5 | Scale & Failure | Concurrency, scalability, reliability, failure scenarios |
+| R2 | Justify | Why a technology/architecture/approach was chosen |
+| R3 | Tradeoff | Comparison against alternatives |
+| R4 | Scale & Failure | Concurrency, scalability, reliability, failure scenarios |
+
+Target: highest rung held ≥ 3. `highestRungHeld`/`breakRung` are validated
+to the range 1–4 in `interview.service.ts` (`MAX_RUNG = 4`).
+
+**Break cause categories** (`BreakCauseCategory`) match the same source
+doc's mechanism — "give ONE hint after the break; recovered → articulation
+gap, still stuck → knowledge gap": `KNOWLEDGE_GAP | ARTICULATION_GAP |
+OWNERSHIP_GAP | EVIDENCE_CLAIM_GAP | OTHER`.
 
 **Break Rule constraint:** `breakRung` can never exceed `highestRungHeld`.
 This models the program's hint-and-recover mechanism: an interviewer may
@@ -109,7 +118,14 @@ above the specific rung at which the break was noted — but never below it.
 **Interview scheduling:**
 - Unlimited interviews per student (`sequenceNumber` auto-increments) — the
   program plan happens to use Mock + Final, but the schema does not assume
-  exactly two.
+  exactly two. The Admin UI defaults to offering exactly 2 interview slots
+  (Mock, then Final) per A1 student, but a genuine 3rd re-run is not
+  blocked server-side.
+- Interviewers must be an existing account on the platform
+  (`Interview.interviewerId` → `User`); the Admin UI's interviewer picker is
+  restricted to `ADMIN`-role accounts.
+- `Interview.transcriptUrl` optionally holds the Google Meet transcript doc
+  link for that interview.
 - Scheduling the first interview for a Track A1 student advances their
   stage from `A1_INTENSIVE` to `INTERVIEW` (itself a recorded
   `TrackTransition`).
@@ -119,17 +135,22 @@ above the specific rung at which the break was noted — but never below it.
 
 ## 5. A2 / Track B development loop (`developmentTrack.service.ts`)
 
-Deliverable templates are reusable (`DeliverableTemplate`); assigning one to
-a student snapshots its content into `DeliverableAssignment.templateSnapshot`
-so a later template edit never changes the historical meaning of what a
-student was actually asked to do.
+Every deliverable is written directly for the student it's assigned to
+(`DeliverableAssignment`) — there is no reusable template library and no
+separate checkpoint grouping. A2 deliverables are always estimated in
+`HOURS`; Track B always in `DAYS`, in half-day steps (0.5, 1, 1.5, ...),
+minimum 0.5 — enforced in `assignDeliverable`. The one progress figure
+shown to both Admin and Growth Coach — in the app and in the assignment
+email — is the sum of estimated time across a student's currently-assigned
+deliverables for that track, plus how many of them are `VERIFIED`
+(`sumEstimatedTime`).
 
 **Growth Coach decision → routing — the one rule that must never collapse:**
 
 | Track | Decision | Result |
 |---|---|---|
 | A2 | SUFFICIENT | → **A1**, stage `A1_INTENSIVE`. Video Questioning is **never repeated** — the student already proved they could do it. |
-| A2 | NOT_SUFFICIENT | Stays A2, stage `A2_DEVELOPMENT`. A `TrackTransition` is still recorded (history of the decision itself). |
+| A2 | NOT_SUFFICIENT | Stays A2, stage `A2_DEVELOPMENT`. When recorded by an Admin, a `TrackTransition` is still recorded (history of the decision itself); the `GrowthCoachEvaluation` row itself is always recorded either way. |
 | B | SUFFICIENT | → **A**, stage `VIDEO_ASSESSMENT`. The student re-enters at Orientation/Video — they have never been through Track A's process. |
 | B | NOT_SUFFICIENT | Stays B, stage `B_DEVELOPMENT`. |
 
@@ -141,6 +162,16 @@ promotion can never accidentally skip it.
 Recording a Growth Coach evaluation requires `student.currentTrack` to
 match the `track` argument (prevents recording an A2 decision for a
 student who has already moved), and `feedback` of at least 10 characters.
+
+**Movement always rests with Program Admins.** When a Growth Coach records
+the evaluation, the routing above is computed and stored on the
+`GrowthCoachEvaluation` but not applied — `pendingAdminConfirmation` is set
+and the student does not move yet. A Program Admin must call
+`POST /growth-coach-evaluations/:id/confirm` to apply it (or `.../dismiss`
+to discard it without moving the student); until then it surfaces as a task
+on every Admin's Tasks feed. When an Admin records the evaluation directly,
+the transition applies immediately, same as before — that is already a
+deliberate Admin action.
 
 ## 6. Graduation (`graduation.service.ts`)
 
@@ -246,5 +277,5 @@ authoritative once it became available mid-session:
   workbook uses this as free text describing exactly what must be
   submitted (e.g. "1 commit/PR link showing the completed change, with a
   3-5 line caption"). Corrected to a required `String` field
-  (`DeliverableTemplate.submissionRequired`) before any real usage — see
+  (`DeliverableAssignment.submissionRequired`) before any real usage — see
   the migration `deliverable-submission-required-text`.

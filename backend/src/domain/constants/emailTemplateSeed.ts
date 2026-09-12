@@ -2,6 +2,13 @@
 // systemSeed.service.ts purely so the (long) copy isn't in the way of the
 // seeding logic itself.
 export const EMAIL_TEMPLATE_SEED: Record<string, { name: string; subject: string; bodyHtml: string; variables: string[] }> = {
+  RESUME_REVIEW_RESULT: {
+    name: "Resume / Project Review — Track Result",
+    subject: "Your Project & Resume Review Result",
+    bodyHtml:
+      "<p>Hello {{studentName}},</p><p>Your Project & Resume Review is complete. You have been placed on <strong>{{track}}</strong>.</p><p>{{feedback}}</p><p>Next step: {{nextStep}}</p>",
+    variables: ["studentName", "track", "feedback", "nextStep"],
+  },
   TRACK_A_VIDEO_QUESTIONS_ASSIGNED: {
     name: "Track A — Video Questions Assigned",
     subject: "Your Track A Video Questions — {{cohortName}}",

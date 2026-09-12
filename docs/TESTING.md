@@ -53,7 +53,7 @@ keeps test files from racing on the shared SQLite file.
 | Track transition: always creates history; blocks non-routine moves without override; allows override with reason | `tests/unit/historyAndFlags.test.ts` |
 | Flags: create/resolve/audit trail; rejects double-resolve | `tests/unit/historyAndFlags.test.ts` |
 | Email: preview renders without logging; send logs event+recipient+attempt via mock provider; rejects empty/invalid recipients | `tests/unit/email.test.ts` |
-| Permissions: unauthenticated rejected, ADMIN allowed, other role (TEACHING_NINJA) rejected, garbage token rejected, health check open | `tests/integration/permissions.test.ts` |
+| Permissions: unauthenticated rejected, ADMIN allowed, GROWTH_COACH allowed on shared endpoints but rejected from admin-only ones, garbage token rejected, health check open | `tests/integration/permissions.test.ts` |
 | Move Student (manual track transition) route: routine move succeeds, non-routine blocked, short reason rejected | `tests/integration/trackTransitionRoute.test.ts` |
 
 40 test cases total across 8 files as of this writing.

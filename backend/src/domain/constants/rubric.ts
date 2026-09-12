@@ -203,14 +203,16 @@ export const TRACK_A_VIDEO_QUESTION_SET_V1: {
   ],
 };
 
-// The program's "5-Level Ladder" (Project Defence Plan, "How the Process
-// Drives Ladder Movement"). R1..R5 = Explain, Implement, Justify, Tradeoff,
-// Scale & Failure — used for interview rung tracking (highest rung held,
-// break rung).
+// Interview rung scale — R1..R4 = Explain, Justify, Tradeoff, Scale & Failure.
+// This is the actual scale used in the program's live scoring workbook
+// ("Database Ninja Interface" source doc, Interview sheet footnote: "[1]
+// Highest rung FULLY held before the break. 1 Explain - 2 Justify - 3
+// Tradeoff - 4 Scale & Failure. Target >= 3."), which takes precedence over
+// the 5-level R1-R5 ladder described narratively in the program plan doc —
+// the workbook is the actual field used to score real interviews.
 export const RUNG_LEVELS = [
   { level: 1, key: "R1", label: "Explain", order: 1 },
-  { level: 2, key: "R2", label: "Implement", order: 2 },
-  { level: 3, key: "R3", label: "Justify", order: 3 },
-  { level: 4, key: "R4", label: "Tradeoff", order: 4 },
-  { level: 5, key: "R5", label: "Scale & Failure", order: 5 },
+  { level: 2, key: "R2", label: "Justify", order: 2 },
+  { level: 3, key: "R3", label: "Tradeoff", order: 3 },
+  { level: 4, key: "R4", label: "Scale & Failure", order: 4 },
 ] as const;

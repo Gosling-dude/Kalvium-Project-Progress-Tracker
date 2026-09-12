@@ -32,25 +32,29 @@ export function HistoryPage() {
         {isLoading ? (
           <Spinner />
         ) : (
-          <table className="min-w-full divide-y divide-slate-100 text-sm">
-            <tbody className="divide-y divide-slate-100">
-              {(data?.data as AuditEvent[] | undefined)?.map((e) => (
-                <tr key={e.id}>
-                  <td className="px-4 py-2.5 font-medium text-slate-800">{e.action.replace(/_/g, " ")}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{e.entityType} · {e.entityId.slice(0, 8)}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{e.actor?.name ?? "system"}</td>
-                  <td className="px-4 py-2.5 text-right text-slate-400">{new Date(e.createdAt).toLocaleString()}</td>
-                </tr>
-              ))}
-              {data?.data.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
-                    No events found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-slate-100">
+                {(data?.data as AuditEvent[] | undefined)?.map((e) => (
+                  <tr key={e.id}>
+                    <td className="max-w-[220px] truncate px-4 py-2.5 font-medium text-slate-800" title={e.action.replace(/_/g, " ")}>
+                      {e.action.replace(/_/g, " ")}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{e.entityType} · {e.entityId.slice(0, 8)}</td>
+                    <td className="max-w-[140px] truncate px-4 py-2.5 text-slate-500" title={e.actor?.name ?? "system"}>{e.actor?.name ?? "system"}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-right text-slate-400">{new Date(e.createdAt).toLocaleString()}</td>
+                  </tr>
+                ))}
+                {data?.data.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
+                      No events found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
         {data?.pagination && data.pagination.totalPages > 1 && (
           <div className="flex justify-end gap-2 border-t border-slate-100 px-3 py-2 text-sm">

@@ -33,7 +33,10 @@ export function Table<T>({
         <thead>
           <tr>
             {columns.map((col) => (
-              <th key={col.header} className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <th
+                key={col.header}
+                className={`whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 ${col.className ?? ""}`}
+              >
                 {col.header}
               </th>
             ))}

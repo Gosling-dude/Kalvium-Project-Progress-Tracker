@@ -14,6 +14,7 @@ const recipientSchema = z.object({
   variables: z.record(z.string()).default({}),
   videoAssignmentId: z.string().optional(),
   interviewId: z.string().optional(),
+  bodyOverride: z.string().optional(),
 });
 
 emailRouter.get(
@@ -54,6 +55,7 @@ emailRouter.post(
       recipients: z.array(recipientSchema).min(1),
       relatedEntityType: z.string().optional(),
       relatedEntityId: z.string().optional(),
+      subjectOverride: z.string().optional(),
     });
     const input = schema.parse(req.body);
     res.json({ data: await sendEmail({ ...input, triggeredById: req.user!.id }) });

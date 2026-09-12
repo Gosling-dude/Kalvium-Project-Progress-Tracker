@@ -80,6 +80,19 @@ export function ProjectReviewTab({ student, reviews, onChanged }: { student: Stu
                 <Badge tone={r.outcome === "TRACK_A" ? "info" : "danger"}>{r.outcome?.replace("_", " ")}</Badge>
               </div>
               <p className="text-sm text-slate-600">{r.outcomeReason}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {r.scores.map((s) => (
+                  <div key={s.dimensionKey} className="rounded-md bg-slate-50 p-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-700">{s.dimensionLabel}</span>
+                      <span className={s.mandatoryPass === false ? "font-semibold text-rose-600" : "font-semibold text-slate-800"}>
+                        {s.score}/{s.maxScore}
+                      </span>
+                    </div>
+                    {s.reason && <p className="mt-0.5 text-xs text-slate-500">{s.reason}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>

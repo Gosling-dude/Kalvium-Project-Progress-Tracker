@@ -12,34 +12,44 @@ async function makeA1Student() {
 }
 
 describe("Interview rung model", () => {
-  it("rejects a break rung higher than the highest rung held", async () => {
+  it("rejects a break rung at or below the highest rung held (rungs only ever increase, R1 < R2 < R3 < R4)", async () => {
     const student = await makeA1Student();
     const interview = await scheduleInterview({ studentId: student.id, interviewType: "MOCK", actorId: testAdminId });
 
     await expect(
       recordInterviewEvaluation({
         interviewId: interview.id,
-        highestRungHeld: 2,
-        breakRung: 4,
-        overallFeedback: "Held R2 but somehow broke at R4 — should be rejected.",
+        highestRungHeld: 3,
+        breakRung: 2,
+        overallFeedback: "Held R3 but somehow broke at R2 — should be rejected.",
+        evaluatorId: testAdminId,
+      }),
+    ).rejects.toThrow();
+
+    await expect(
+      recordInterviewEvaluation({
+        interviewId: interview.id,
+        highestRungHeld: 3,
+        breakRung: 3,
+        overallFeedback: "Held R3 and broke at R3 — should be rejected, break must exceed the highest rung held.",
         evaluatorId: testAdminId,
       }),
     ).rejects.toThrow();
   });
 
-  it("accepts a break rung at or below the highest rung held", async () => {
+  it("accepts a break rung higher than the highest rung held", async () => {
     const student = await makeA1Student();
     const interview = await scheduleInterview({ studentId: student.id, interviewType: "MOCK", actorId: testAdminId });
 
     const evaluation = await recordInterviewEvaluation({
       interviewId: interview.id,
-      highestRungHeld: 3,
+      highestRungHeld: 2,
       breakRung: 3,
-      overallFeedback: "Broke exactly at R3 (Justify) when pressed on trade-off reasoning.",
+      overallFeedback: "Held R2 (Justify), broke at R3 (Tradeoff) when pressed on trade-off reasoning.",
       evaluatorId: testAdminId,
     });
 
-    expect(evaluation.highestRungHeld).toBe(3);
+    expect(evaluation.highestRungHeld).toBe(2);
     expect(evaluation.breakRung).toBe(3);
   });
 
@@ -61,8 +71,8 @@ describe("Graduation decision", () => {
     const interview = await scheduleInterview({ studentId: student.id, interviewType: "FINAL", actorId: testAdminId });
     await recordInterviewEvaluation({
       interviewId: interview.id,
-      highestRungHeld: 5,
-      overallFeedback: "Held R5 confidently across two independent interviews.",
+      highestRungHeld: 4,
+      overallFeedback: "Held R4 (Scale & Failure) confidently across two independent interviews.",
       evaluatorId: testAdminId,
       result: "ADVANCE",
     });

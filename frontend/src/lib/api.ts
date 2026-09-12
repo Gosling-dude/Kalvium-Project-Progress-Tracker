@@ -35,13 +35,29 @@ api.interceptors.response.use(
 );
 
 export interface ApiErrorShape {
-  error: { code: string; message: string; details?: unknown };
+  error: {
+    code: string;
+    message: string;
+    details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] };
+  };
 }
 
+// Zod validation failures (422 VALIDATION_ERROR) carry the real reason in
+// `details.fieldErrors`/`formErrors` — the top-level `message` is just the
+// generic "Request failed validation", so surface the field-level text
+// instead whenever it's present.
 export function apiErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
     const e = err as AxiosError<ApiErrorShape>;
-    return e.response?.data?.error?.message ?? e.message;
+    const error = e.response?.data?.error;
+    const fieldErrors = error?.details?.fieldErrors
+      ? Object.entries(error.details.fieldErrors)
+          .filter(([, messages]) => messages?.length)
+          .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
+      : [];
+    const formErrors = error?.details?.formErrors ?? [];
+    const detail = [...fieldErrors, ...formErrors].join("; ");
+    return detail ? `${error!.message} — ${detail}` : (error?.message ?? e.message);
   }
   return err instanceof Error ? err.message : "Something went wrong.";
 }

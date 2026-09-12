@@ -85,18 +85,16 @@ Every response body is `{ "data": ... }` (list endpoints:
 
 ## Deliverables
 
+Every deliverable is written directly for the student it's assigned to —
+there is no template library and no separate checkpoint grouping.
+
 | Method | Path |
 |---|---|
-| GET | `/deliverables/templates?track=` |
-| POST | `/deliverables/templates` (full template fields, see `DeliverableTemplate`) |
-| PATCH | `/deliverables/templates/:id` — bumps `version` |
-| POST | `/deliverables/templates/:id/duplicate` `{ newKey }` |
-| POST | `/deliverables/templates/:id/archive` |
-| POST | `/deliverables/assignments` `{ studentId, templateId, track, checkpointId?, dueAt? }` |
+| POST | `/deliverables/assignments` `{ studentId, track, direct: { title, gapAddressed, whatStudentMustDo, expectedOutcome, submissionType, submissionRequired, submissionDetails?, verificationCriteria, estimatedTimeValue, estimatedTimeUnit }, dueAt? }` — Admin only |
+| GET | `/deliverables/assignments/table?studentId=&track=` — rendered HTML table (used as the `deliverables` email variable), total estimated time as its last row |
+| GET | `/deliverables/assignments/estimated-time?studentId=&track=` — `{ value, unit, count, verifiedCount }` |
 | POST | `/deliverables/assignments/:id/submission` `{ submissionFromStudent }` |
 | POST | `/deliverables/assignments/:id/verify` `{ verificationStatus, feedback }` |
-| POST | `/deliverables/checkpoints` `{ studentId, track, name, sequence, dueAt?, expectedEvidence?, whatWillBeChecked?, expectedProgress? }` |
-| POST | `/deliverables/checkpoints/:id/evaluate` `{ status, evaluationNotes }` |
 
 ## Growth Coach Evaluations & Graduation
 

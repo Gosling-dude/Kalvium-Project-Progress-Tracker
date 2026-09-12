@@ -4,8 +4,16 @@
 // validation and the domain services import, so there is exactly one place
 // that defines what values are legal.
 
-export const ROLE = ["ADMIN", "TEACHING_NINJA", "GROWTH_COACH"] as const;
+// ADMIN doubles as "Program Admin" — the standalone Teaching Ninja role was
+// merged into it (both are program-side staff; Growth Coach is the only
+// role scoped to specific students).
+export const ROLE = ["ADMIN", "GROWTH_COACH"] as const;
 export type Role = (typeof ROLE)[number];
+
+export const ROLE_LABEL: Record<Role, string> = {
+  ADMIN: "Program Admin",
+  GROWTH_COACH: "Growth Coach",
+};
 
 export const PROGRAM_STATUS = [
   "ONBOARDING",
@@ -87,18 +95,18 @@ export type GrowthCoachConfirmationStatus =
 export const INTERVIEW_RESULT = ["ADVANCE", "REPEAT", "FAIL", "INCONCLUSIVE"] as const;
 export type InterviewResult = (typeof INTERVIEW_RESULT)[number];
 
+// Matches the actual operational scoring workbook's Break Cause column: "After
+// the break, give ONE hint. Recovered -> Articulation gap. Still stuck ->
+// Knowledge gap." Ownership/Evidence gaps are the other two gap types named
+// across the program's "How the Process Drives Ladder Movement" doc.
 export const BREAK_CAUSE_CATEGORY = [
-  "TECHNICAL_DEPTH",
-  "COMMUNICATION",
-  "OWNERSHIP",
-  "SCALING",
-  "FAILURE_HANDLING",
+  "KNOWLEDGE_GAP",
+  "ARTICULATION_GAP",
+  "OWNERSHIP_GAP",
+  "EVIDENCE_CLAIM_GAP",
   "OTHER",
 ] as const;
 export type BreakCauseCategory = (typeof BREAK_CAUSE_CATEGORY)[number];
-
-export const DELIVERABLE_TRACK = ["A2", "B", "BOTH"] as const;
-export type DeliverableTrack = (typeof DELIVERABLE_TRACK)[number];
 
 export const SUBMISSION_TYPE = [
   "LINK",
@@ -123,9 +131,6 @@ export const DELIVERABLE_STATUS = [
   "OVERDUE",
 ] as const;
 export type DeliverableStatus = (typeof DELIVERABLE_STATUS)[number];
-
-export const CHECKPOINT_STATUS = ["PENDING", "IN_REVIEW", "PASSED", "FAILED"] as const;
-export type CheckpointStatus = (typeof CHECKPOINT_STATUS)[number];
 
 export const GROWTH_COACH_DECISION = ["SUFFICIENT", "NOT_SUFFICIENT"] as const;
 export type GrowthCoachDecision = (typeof GROWTH_COACH_DECISION)[number];
@@ -161,6 +166,7 @@ export const EMAIL_DELIVERY_STATUS = ["SENT", "FAILED"] as const;
 export type EmailDeliveryStatus = (typeof EMAIL_DELIVERY_STATUS)[number];
 
 export const EMAIL_TEMPLATE_KEY = [
+  "RESUME_REVIEW_RESULT",
   "TRACK_A_VIDEO_QUESTIONS_ASSIGNED",
   "TRACK_A_VIDEO_RESULT",
   "INTERVIEW_SCHEDULED",
@@ -176,3 +182,6 @@ export const EMAIL_TEMPLATE_KEY = [
   "RE_EVALUATION",
 ] as const;
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEY)[number];
+
+export const TIME_UNIT = ["HOURS", "DAYS"] as const;
+export type TimeUnit = (typeof TIME_UNIT)[number];

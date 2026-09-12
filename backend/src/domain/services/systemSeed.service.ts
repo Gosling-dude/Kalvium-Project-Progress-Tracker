@@ -59,8 +59,14 @@ export async function seedVideoQuestionBank() {
 }
 
 export async function seedRungLevels() {
+  const validKeys = RUNG_LEVELS.map((r) => r.key);
+  // Removes a stale R5 row left over from the corrected 1-4 rung scale (see
+  // rubric.ts) — safe because RungLevel is pure reference data, never
+  // referenced by foreign key from InterviewEvaluation (which stores the
+  // rung as a plain Int).
+  await prisma.rungLevel.deleteMany({ where: { key: { notIn: validKeys } } });
   for (const rung of RUNG_LEVELS) {
-    await prisma.rungLevel.upsert({ where: { key: rung.key }, create: rung, update: {} });
+    await prisma.rungLevel.upsert({ where: { key: rung.key }, create: rung, update: rung });
   }
 }
 

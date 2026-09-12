@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Input, Textarea } from "../../components/ui/Form";
 import { ErrorBanner } from "../../components/ui/Feedback";
 import { Badge } from "../../components/ui/Badge";
+import { EmailComposer } from "../../components/EmailComposer";
 import { Student } from "../../types";
 
 interface VideoAssignment {
@@ -16,6 +17,12 @@ interface VideoAssignment {
   finalizedAt: string | null;
   totalScore: number | null;
   assignedAt: string;
+  evaluations: {
+    id: string;
+    score: number | null;
+    notes: string | null;
+    question: { questionKey: string; questionNumber: number; title: string; marks: number };
+  }[];
 }
 
 export function VideoTab({ student, assignments, onChanged }: { student: Student; assignments: VideoAssignment[]; onChanged: () => void }) {
@@ -49,7 +56,7 @@ export function VideoTab({ student, assignments, onChanged }: { student: Student
           </div>
         )
       ) : (
-        <VideoAssignmentPanel assignmentId={latest.id} onChanged={onChanged} />
+        <VideoAssignmentPanel assignmentId={latest.id} student={student} onChanged={onChanged} />
       )}
 
       {assignments.filter((a) => a.finalizedAt).length > 0 && (
@@ -66,6 +73,38 @@ export function VideoTab({ student, assignments, onChanged }: { student: Student
                   <Badge tone={a.outcome === "A1" ? "success" : "warning"}>{a.outcome}</Badge>
                 </div>
                 <p className="mt-1 text-slate-600">{a.outcomeReason}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {[...a.evaluations]
+                    .sort((x, y) => x.question.questionNumber - y.question.questionNumber)
+                    .map((e) => (
+                      <div key={e.id} className="rounded-md bg-slate-50 p-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-slate-700">
+                            {e.question.questionNumber}. {e.question.title}
+                          </span>
+                          <span className="font-semibold text-slate-800">
+                            {e.score ?? 0}/{e.question.marks}
+                          </span>
+                        </div>
+                        {e.notes && <p className="mt-0.5 text-xs text-slate-500">{e.notes}</p>}
+                      </div>
+                    ))}
+                </div>
+                <div className="mt-2">
+                  <EmailComposer
+                    student={student}
+                    defaultTemplateKey="TRACK_A_VIDEO_RESULT"
+                    lockTemplate
+                    defaultVariables={{
+                      track: a.outcome ?? "",
+                      feedback: a.outcomeReason ?? "",
+                      nextStep: a.outcome === "A1" ? "You will move into the A1 5-day intensive program." : "You will receive Track A2 development deliverables.",
+                    }}
+                    relatedEntityType="VideoAssignment"
+                    relatedEntityId={a.id}
+                    triggerLabel="Send Video Result Email"
+                  />
+                </div>
               </div>
             ))}
         </div>
@@ -74,7 +113,7 @@ export function VideoTab({ student, assignments, onChanged }: { student: Student
   );
 }
 
-function VideoAssignmentPanel({ assignmentId, onChanged }: { assignmentId: string; onChanged: () => void }) {
+function VideoAssignmentPanel({ assignmentId, student, onChanged }: { assignmentId: string; student: Student; onChanged: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [outcomeReason, setOutcomeReason] = useState("");
   const { data, refetch } = useQuery({ queryKey: ["video-assignment", assignmentId], queryFn: () => fetchVideoAssignmentProgress(assignmentId) });
@@ -88,6 +127,9 @@ function VideoAssignmentPanel({ assignmentId, onChanged }: { assignmentId: strin
   if (!data) return null;
 
   const mandatoryKeys = new Set(data.mandatoryStatus.map((m: { questionKey: string }) => m.questionKey));
+  const questionList = data.assignment.evaluations
+    .map((e: { question: { questionNumber: number; title: string; questionText: string } }) => `${e.question.questionNumber}. ${e.question.title} — ${e.question.questionText}`)
+    .join("<br/>");
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -96,6 +138,17 @@ function VideoAssignmentPanel({ assignmentId, onChanged }: { assignmentId: strin
         <span className="text-sm text-slate-500">
           {data.submittedCount}/{data.totalQuestions} submitted · {data.evaluatedCount}/{data.totalQuestions} reviewed · {data.totalScoreSoFar}/50 so far
         </span>
+      </div>
+      <div className="mb-3">
+        <EmailComposer
+          student={student}
+          defaultTemplateKey="TRACK_A_VIDEO_QUESTIONS_ASSIGNED"
+          lockTemplate
+          defaultVariables={{ projectName: student.chosenProject ?? "", deadline: "3 days from assignment", questions: questionList }}
+          relatedEntityType="VideoAssignment"
+          relatedEntityId={assignmentId}
+          triggerLabel="Send Video Questions Email"
+        />
       </div>
       {error && <div className="mb-3"><ErrorBanner message={error} /></div>}
 

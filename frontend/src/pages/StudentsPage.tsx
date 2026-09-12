@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { createStudent, fetchCampuses, fetchCohorts, fetchGrowthCoaches, fetchStudents } from "../lib/queries";
 import { Student, Campus, Cohort, GrowthCoach, Pagination } from "../types";
 import { Button } from "../components/ui/Button";
@@ -10,9 +10,12 @@ import { Badge, ProgramStatusBadge, TrackBadge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { Field, Input, Select } from "../components/ui/Form";
 import { apiErrorMessage } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
 export function StudentsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [params, setParams] = useSearchParams();
   const [showCreate, setShowCreate] = useState(false);
   const queryClient = useQueryClient();
@@ -21,18 +24,20 @@ export function StudentsPage() {
   const track = params.get("track") ?? "";
   const programStatus = params.get("programStatus") ?? "";
   const cohortId = params.get("cohortId") ?? "";
+  const batch = params.get("batch") ?? "";
   const page = Number(params.get("page") ?? "1");
 
   const { data: cohorts } = useQuery<Cohort[]>({ queryKey: ["cohorts"], queryFn: () => fetchCohorts() });
 
   const { data, isLoading } = useQuery<{ data: Student[]; pagination: Pagination }>({
-    queryKey: ["students", { search, track, programStatus, cohortId, page }],
+    queryKey: ["students", { search, track, programStatus, cohortId, batch, page }],
     queryFn: () =>
       fetchStudents({
         search: search || undefined,
         track: track || undefined,
         programStatus: programStatus || undefined,
         cohortId: cohortId || undefined,
+        batch: batch || undefined,
         page,
         pageSize: 20,
         sort: "updated",
@@ -51,10 +56,21 @@ export function StudentsPage() {
     <div className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Students</h1>
-          <p className="text-sm text-slate-500">Search, filter, and open a student's full journey.</p>
+          <h1 className="text-xl font-bold text-slate-900">{isAdmin ? "Students" : "My Students"}</h1>
+          <p className="text-sm text-slate-500">
+            {isAdmin
+              ? "Search, filter, and open a student's full journey. For bulk creation, see Settings → Bulk Upload."
+              : "Students assigned to you. Open one to review deliverables, flags, and their full history."}
+          </p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>New Student</Button>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Link to="/settings">
+              <Button variant="secondary">Bulk Upload</Button>
+            </Link>
+            <Button onClick={() => setShowCreate(true)}>New Student</Button>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -87,6 +103,7 @@ export function StudentsPage() {
             </option>
           ))}
         </Select>
+        <Input placeholder="Batch (e.g. 2024)" className="w-40" defaultValue={batch} onChange={(e) => setParam("batch", e.target.value)} />
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white">
@@ -100,9 +117,26 @@ export function StudentsPage() {
               onRowClick={(s) => navigate(`/students/${s.id}`)}
               emptyMessage="No students match these filters."
               columns={[
-                { header: "Name", render: (s) => <span className="font-medium text-slate-900">{s.fullName}</span> },
-                { header: "Email", render: (s) => s.email },
-                { header: "Cohort", render: (s) => s.currentCohort?.name ?? "—" },
+                {
+                  header: "Name",
+                  className: "max-w-[160px] truncate",
+                  render: (s) => (
+                    <span className="font-medium text-slate-900" title={s.fullName}>
+                      {s.fullName}
+                    </span>
+                  ),
+                },
+                {
+                  header: "Email",
+                  className: "max-w-[200px] truncate",
+                  render: (s) => <span title={s.email}>{s.email}</span>,
+                },
+                {
+                  header: "Cohort",
+                  className: "max-w-[140px] truncate",
+                  render: (s) => <span title={s.currentCohort?.name ?? ""}>{s.currentCohort?.name ?? "—"}</span>,
+                },
+                { header: "Batch", render: (s) => s.batch ?? "—" },
                 { header: "Track", render: (s) => <TrackBadge track={s.currentTrack} /> },
                 { header: "Stage", render: (s) => s.currentStage.replace(/_/g, " ") },
                 { header: "Status", render: (s) => <ProgramStatusBadge status={s.programStatus} /> },
@@ -136,6 +170,8 @@ function CreateStudentModal({ onClose, onCreated }: { onClose: () => void; onCre
   const [campusId, setCampusId] = useState("");
   const [growthCoachId, setGrowthCoachId] = useState("");
   const [cohortId, setCohortId] = useState("");
+  const [batch, setBatch] = useState("");
+  const [resumeLink, setResumeLink] = useState("");
   const [chosenProject, setChosenProject] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -151,6 +187,8 @@ function CreateStudentModal({ onClose, onCreated }: { onClose: () => void; onCre
         campusId: campusId || undefined,
         growthCoachId: growthCoachId || undefined,
         cohortId: cohortId || undefined,
+        batch: batch || undefined,
+        resumeLink: resumeLink || undefined,
         chosenProject: chosenProject || undefined,
       }),
     onSuccess: (student: Student) => onCreated(student.id),
@@ -176,6 +214,12 @@ function CreateStudentModal({ onClose, onCreated }: { onClose: () => void; onCre
         </Field>
         <Field label="Chosen project" hint="Optional">
           <Input value={chosenProject} onChange={(e) => setChosenProject(e.target.value)} />
+        </Field>
+        <Field label="Batch / Year" hint="Optional, e.g. 2024">
+          <Input value={batch} onChange={(e) => setBatch(e.target.value)} />
+        </Field>
+        <Field label="Resume Google Drive link" hint="Optional">
+          <Input value={resumeLink} onChange={(e) => setResumeLink(e.target.value)} placeholder="https://drive.google.com/..." />
         </Field>
         <Field label="Campus" hint="Optional">
           <Select value={campusId} onChange={(e) => setCampusId(e.target.value)}>

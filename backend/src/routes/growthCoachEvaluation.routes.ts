@@ -2,11 +2,19 @@ import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../lib/asyncHandler";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { ForbiddenError } from "../lib/errors";
 import { GROWTH_COACH_DECISION } from "../domain/constants/enums";
-import { recordGrowthCoachEvaluation } from "../domain/services/developmentTrack.service";
+import { getGrowthCoachForUserId } from "../domain/services/campus.service";
+import {
+  confirmGrowthCoachEvaluationTransition,
+  dismissGrowthCoachEvaluationTransition,
+  recordGrowthCoachEvaluation,
+} from "../domain/services/developmentTrack.service";
 
 export const growthCoachEvaluationRouter = Router();
-growthCoachEvaluationRouter.use(requireAuth, requireRole("ADMIN"));
+growthCoachEvaluationRouter.use(requireAuth, requireRole("ADMIN", "GROWTH_COACH"));
+
+const adminOnly = requireRole("ADMIN");
 
 growthCoachEvaluationRouter.post(
   "/",
@@ -27,6 +35,33 @@ growthCoachEvaluationRouter.post(
       evaluatorGrowthCoachId: z.string().optional(),
     });
     const input = schema.parse(req.body);
-    res.status(201).json({ data: await recordGrowthCoachEvaluation({ ...input, actorId: req.user!.id }) });
+
+    let actorGrowthCoachId: string | null | undefined;
+    if (req.user!.role === "GROWTH_COACH") {
+      const coach = await getGrowthCoachForUserId(req.user!.id);
+      if (!coach) throw new ForbiddenError("No Growth Coach profile is linked to this account.");
+      actorGrowthCoachId = coach.id;
+    }
+
+    res.status(201).json({ data: await recordGrowthCoachEvaluation({ ...input, actorId: req.user!.id, actorGrowthCoachId }) });
+  }),
+);
+
+// Applies a Growth-Coach-recorded evaluation's pending transition — the only
+// way that evaluation actually moves the student (movement rests with
+// Program Admins, never automatic from the coach's own action).
+growthCoachEvaluationRouter.post(
+  "/:id/confirm",
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    res.json({ data: await confirmGrowthCoachEvaluationTransition(req.params.id, req.user!.id) });
+  }),
+);
+
+growthCoachEvaluationRouter.post(
+  "/:id/dismiss",
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    res.json({ data: await dismissGrowthCoachEvaluationTransition(req.params.id, req.user!.id) });
   }),
 );

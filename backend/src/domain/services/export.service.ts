@@ -32,6 +32,7 @@ export async function exportStudents(format: ExportFormat, filters: { cohortId?:
     "email",
     "phone",
     "campus",
+    "batch",
     "growthCoach",
     "cohort",
     "currentTrack",
@@ -45,6 +46,7 @@ export async function exportStudents(format: ExportFormat, filters: { cohortId?:
     email: s.email,
     phone: s.phone ?? "",
     campus: s.campus?.name ?? "",
+    batch: s.batch ?? "",
     growthCoach: s.growthCoach?.name ?? "",
     cohort: s.cohortEnrollments[0]?.cohort.name ?? "",
     currentTrack: s.currentTrack,
@@ -94,17 +96,18 @@ export async function exportInterviews(format: ExportFormat) {
 
 export async function exportDeliverables(format: ExportFormat) {
   const deliverables = await prisma.deliverableAssignment.findMany({
-    include: { student: true, template: true },
+    include: { student: true },
     take: EXPORT_ROW_LIMIT,
     orderBy: { assignedAt: "asc" },
   });
 
-  const columns = ["studentName", "studentEmail", "track", "task", "status", "verificationStatus", "dueAt", "submittedAt"];
+  const columns = ["studentName", "studentEmail", "track", "task", "estimatedTime", "status", "verificationStatus", "dueAt", "submittedAt"];
   const rows = deliverables.map((d) => ({
     studentName: d.student.fullName,
     studentEmail: d.student.email,
     track: d.track,
-    task: d.template.title,
+    task: d.title,
+    estimatedTime: `${d.estimatedTimeValue} ${d.estimatedTimeUnit.toLowerCase()}`,
     status: d.status,
     verificationStatus: d.verificationStatus,
     dueAt: d.dueAt?.toISOString() ?? "",

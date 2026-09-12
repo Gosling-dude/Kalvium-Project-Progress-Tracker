@@ -20,8 +20,6 @@ async function resetDatabase() {
     "InterviewEvaluation",
     "Interview",
     "DeliverableAssignment",
-    "Checkpoint",
-    "DeliverableTemplate",
     "VideoQuestionEvaluation",
     "VideoAssignment",
     "VideoQuestion",

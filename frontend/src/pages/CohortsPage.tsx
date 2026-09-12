@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { createCohort, fetchCampuses, fetchCohorts } from "../lib/queries";
-import { Cohort, Campus } from "../types";
+import { createCohort, fetchCohorts } from "../lib/queries";
+import { Cohort } from "../types";
 import { Button } from "../components/ui/Button";
 import { Table } from "../components/ui/Table";
 import { Spinner, ErrorBanner } from "../components/ui/Feedback";
 import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
-import { Field, Input, Select, Textarea } from "../components/ui/Form";
+import { Field, Input, Textarea } from "../components/ui/Form";
 import { apiErrorMessage } from "../lib/api";
 
 export function CohortsPage() {
@@ -39,7 +39,6 @@ export function CohortsPage() {
             columns={[
               { header: "Name", render: (c) => <span className="font-medium text-slate-900">{c.name}</span> },
               { header: "Code", render: (c) => c.code },
-              { header: "Campus", render: (c) => c.campus?.name ?? "—" },
               { header: "Active students", render: (c) => c.activeStudentCount ?? 0 },
               { header: "Status", render: (c) => <Badge tone={c.status === "ACTIVE" ? "success" : "neutral"}>{c.status}</Badge> },
             ]}
@@ -63,13 +62,11 @@ export function CohortsPage() {
 function CreateCohortModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [campusId, setCampusId] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const { data: campuses } = useQuery<Campus[]>({ queryKey: ["campuses"], queryFn: () => fetchCampuses() });
   const mutation = useMutation({
-    mutationFn: () => createCohort({ name, code, campusId: campusId || undefined, description: description || undefined }),
+    mutationFn: () => createCohort({ name, code, description: description || undefined }),
     onSuccess: onCreated,
     onError: (err) => setError(apiErrorMessage(err)),
   });
@@ -90,16 +87,6 @@ function CreateCohortModal({ onClose, onCreated }: { onClose: () => void; onCrea
         </Field>
         <Field label="Code">
           <Input required value={code} onChange={(e) => setCode(e.target.value)} placeholder="SPE-2024-B3" />
-        </Field>
-        <Field label="Campus" hint="Optional">
-          <Select value={campusId} onChange={(e) => setCampusId(e.target.value)}>
-            <option value="">—</option>
-            {campuses?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
         </Field>
         <Field label="Description" hint="Optional">
           <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />

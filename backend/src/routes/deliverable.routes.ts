@@ -2,27 +2,41 @@ import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../lib/asyncHandler";
 import { requireAuth, requireRole } from "../middleware/auth";
-import { DELIVERABLE_TRACK, SUBMISSION_TYPE, VERIFICATION_STATUS, CHECKPOINT_STATUS } from "../domain/constants/enums";
-import {
-  archiveDeliverableTemplate,
-  createDeliverableTemplate,
-  duplicateDeliverableTemplate,
-  listDeliverableTemplates,
-  updateDeliverableTemplate,
-} from "../domain/services/deliverableTemplate.service";
+import { ForbiddenError } from "../lib/errors";
+import { SUBMISSION_TYPE, VERIFICATION_STATUS, TIME_UNIT } from "../domain/constants/enums";
+import { getGrowthCoachForUserId } from "../domain/services/campus.service";
 import {
   assignDeliverable,
-  createCheckpoint,
-  evaluateCheckpoint,
+  deleteDeliverableAssignment,
+  getDeliverablesTableHtml,
   recordDeliverableSubmission,
+  sumEstimatedTime,
+  updateDeliverableAssignment,
   verifyDeliverable,
 } from "../domain/services/developmentTrack.service";
 
 export const deliverableRouter = Router();
-deliverableRouter.use(requireAuth, requireRole("ADMIN"));
+deliverableRouter.use(requireAuth, requireRole("ADMIN", "GROWTH_COACH"));
 
-const templateInputSchema = z.object({
-  key: z.string().min(1),
+// Assigning a deliverable stays Admin-only; a Growth Coach's actions are
+// restricted to their own assigned students' submission/verification at the
+// service layer (resolveActorGrowthCoachId below).
+const adminOnly = requireRole("ADMIN");
+
+// Resolves the caller's GrowthCoach id when they're logged in as one, so the
+// service layer can enforce "only your own assigned students" — undefined
+// (not called) for Admin, who is unrestricted.
+async function resolveActorGrowthCoachId(req: import("express").Request): Promise<string | null | undefined> {
+  if (req.user!.role !== "GROWTH_COACH") return undefined;
+  const coach = await getGrowthCoachForUserId(req.user!.id);
+  if (!coach) throw new ForbiddenError("No Growth Coach profile is linked to this account.");
+  return coach.id;
+}
+
+// Every deliverable is written directly for the one student it's assigned
+// to — there is no reusable template library (each one is unique to the
+// gap it addresses).
+const directDeliverableSchema = z.object({
   title: z.string().min(1),
   gapAddressed: z.string().min(1),
   whatStudentMustDo: z.string().min(1),
@@ -31,62 +45,70 @@ const templateInputSchema = z.object({
   submissionRequired: z.string().min(1),
   submissionDetails: z.string().optional(),
   verificationCriteria: z.string().min(1),
-  estimatedTime: z.string().optional(),
-  track: z.enum(DELIVERABLE_TRACK),
-  order: z.number().int().optional(),
+  estimatedTimeValue: z.number().positive(),
+  estimatedTimeUnit: z.enum(TIME_UNIT),
 });
-
-deliverableRouter.get(
-  "/templates",
-  asyncHandler(async (req, res) => {
-    res.json({ data: await listDeliverableTemplates(req.query.track as never) });
-  }),
-);
-
-deliverableRouter.post(
-  "/templates",
-  asyncHandler(async (req, res) => {
-    const input = templateInputSchema.parse(req.body);
-    res.status(201).json({ data: await createDeliverableTemplate(input, req.user!.id) });
-  }),
-);
-
-deliverableRouter.patch(
-  "/templates/:id",
-  asyncHandler(async (req, res) => {
-    const input = templateInputSchema.partial().parse(req.body);
-    res.json({ data: await updateDeliverableTemplate(req.params.id, input, req.user!.id) });
-  }),
-);
-
-deliverableRouter.post(
-  "/templates/:id/duplicate",
-  asyncHandler(async (req, res) => {
-    const schema = z.object({ newKey: z.string().min(1) });
-    const input = schema.parse(req.body);
-    res.status(201).json({ data: await duplicateDeliverableTemplate(req.params.id, input.newKey, req.user!.id) });
-  }),
-);
-
-deliverableRouter.post(
-  "/templates/:id/archive",
-  asyncHandler(async (req, res) => {
-    res.json({ data: await archiveDeliverableTemplate(req.params.id, req.user!.id) });
-  }),
-);
 
 deliverableRouter.post(
   "/assignments",
+  adminOnly,
   asyncHandler(async (req, res) => {
     const schema = z.object({
       studentId: z.string().min(1),
-      templateId: z.string().min(1),
+      direct: directDeliverableSchema,
       track: z.enum(["A2", "B"]),
-      checkpointId: z.string().optional(),
       dueAt: z.coerce.date().optional(),
     });
     const input = schema.parse(req.body);
     res.status(201).json({ data: await assignDeliverable({ ...input, actorId: req.user!.id }) });
+  }),
+);
+
+deliverableRouter.get(
+  "/assignments/table",
+  asyncHandler(async (req, res) => {
+    const schema = z.object({
+      studentId: z.string().min(1),
+      track: z.enum(["A2", "B"]),
+      // Comma-separated assignment ids — lets the admin pick exactly which
+      // assigned deliverables go into this particular email. Omitted means
+      // every currently-assigned deliverable for the track.
+      ids: z.string().optional(),
+    });
+    const input = schema.parse(req.query);
+    const ids = input.ids ? input.ids.split(",").filter(Boolean) : undefined;
+    res.json({ data: { html: await getDeliverablesTableHtml(input.studentId, input.track, ids) } });
+  }),
+);
+
+deliverableRouter.get(
+  "/assignments/estimated-time",
+  asyncHandler(async (req, res) => {
+    const schema = z.object({ studentId: z.string().min(1), track: z.enum(["A2", "B"]) });
+    const input = schema.parse(req.query);
+    res.json({ data: await sumEstimatedTime(input.studentId, input.track) });
+  }),
+);
+
+// Editing/deleting a deliverable's own definition stays Admin-only — a
+// Growth Coach's edits are limited to recording a submission or verifying
+// one (below), never the deliverable's content itself.
+deliverableRouter.patch(
+  "/assignments/:id",
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    const schema = directDeliverableSchema.partial().extend({ dueAt: z.coerce.date().nullable().optional() });
+    const input = schema.parse(req.body);
+    res.json({ data: await updateDeliverableAssignment(req.params.id, input, req.user!.id) });
+  }),
+);
+
+deliverableRouter.delete(
+  "/assignments/:id",
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    await deleteDeliverableAssignment(req.params.id, req.user!.id);
+    res.status(204).send();
   }),
 );
 
@@ -95,7 +117,8 @@ deliverableRouter.post(
   asyncHandler(async (req, res) => {
     const schema = z.object({ submissionFromStudent: z.string().min(1) });
     const input = schema.parse(req.body);
-    res.json({ data: await recordDeliverableSubmission(req.params.id, input, req.user!.id) });
+    const actorGrowthCoachId = await resolveActorGrowthCoachId(req);
+    res.json({ data: await recordDeliverableSubmission(req.params.id, input, req.user!.id, actorGrowthCoachId) });
   }),
 );
 
@@ -104,33 +127,7 @@ deliverableRouter.post(
   asyncHandler(async (req, res) => {
     const schema = z.object({ verificationStatus: z.enum(VERIFICATION_STATUS), feedback: z.string().min(1) });
     const input = schema.parse(req.body);
-    res.json({ data: await verifyDeliverable(req.params.id, input, req.user!.id) });
-  }),
-);
-
-deliverableRouter.post(
-  "/checkpoints",
-  asyncHandler(async (req, res) => {
-    const schema = z.object({
-      studentId: z.string().min(1),
-      track: z.enum(DELIVERABLE_TRACK),
-      name: z.string().min(1),
-      sequence: z.number().int(),
-      dueAt: z.coerce.date().optional(),
-      expectedEvidence: z.string().optional(),
-      whatWillBeChecked: z.string().optional(),
-      expectedProgress: z.string().optional(),
-    });
-    const input = schema.parse(req.body);
-    res.status(201).json({ data: await createCheckpoint({ ...input, actorId: req.user!.id }) });
-  }),
-);
-
-deliverableRouter.post(
-  "/checkpoints/:id/evaluate",
-  asyncHandler(async (req, res) => {
-    const schema = z.object({ status: z.enum(CHECKPOINT_STATUS), evaluationNotes: z.string().min(1) });
-    const input = schema.parse(req.body);
-    res.json({ data: await evaluateCheckpoint(req.params.id, input, req.user!.id) });
+    const actorGrowthCoachId = await resolveActorGrowthCoachId(req);
+    res.json({ data: await verifyDeliverable(req.params.id, input, req.user!.id, actorGrowthCoachId) });
   }),
 );

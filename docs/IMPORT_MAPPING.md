@@ -90,8 +90,10 @@ Estimated Time: ...           <- mixed units in the same sheet
                                   ("2.5 hours", "45 minutes", "1.5 hours")
 ```
 
-This maps almost exactly onto `DeliverableTemplate`'s fields. Two things
-this confirmed and fixed during implementation:
+This maps almost exactly onto `DeliverableAssignment`'s content fields —
+there is no separate template model; every deliverable is written directly
+for the student it's assigned to. Two things this confirmed and fixed
+during implementation:
 
 - `submissionRequired` must be a free-text `String`, not a boolean — the
   schema was corrected before this had any real usage (see
@@ -102,17 +104,17 @@ this confirmed and fixed during implementation:
 Not currently modeled or imported: `Deliverables Sent Status` (e.g.
 `"Sent"`), `Deliverables Time Stamp`, `Deliverables Completion Timeline`
 (e.g. `"7 days"`). A future enhancement could map these onto
-`DeliverableAssignment.assignedAt`/a computed due window, but the deliverable
-*template* import itself isn't built yet — only the student-identity
+`DeliverableAssignment.assignedAt`/a computed due window, but a bulk
+deliverable import itself isn't built yet — only the student-identity
 importer described above exists in this release.
 
 ## Extending the importer
 
-To import deliverables/checkpoints/historical evaluations structurally in
-a future phase: add a new `previewXImport`/`commitXImport` pair in
+To import deliverables/historical evaluations structurally in a future
+phase: add a new `previewXImport`/`commitXImport` pair in
 `import.service.ts` following the same pattern (normalize → validate →
 report row-level errors/warnings → commit only validated rows), reusing
-`assignDeliverable`/`createCheckpoint`/`createProjectReview` etc. from the
-existing domain services rather than writing raw Prisma calls — this keeps
-imported data subject to the exact same validation and history rules as
-data entered through the UI.
+`assignDeliverable`/`createProjectReview` etc. from the existing domain
+services rather than writing raw Prisma calls — this keeps imported data
+subject to the exact same validation and history rules as data entered
+through the UI.

@@ -26,10 +26,23 @@ export function FlagsPage() {
             onRowClick={(f) => navigate(`/students/${f.studentId}`)}
             emptyMessage="No open flags. Nothing needs attention right now."
             columns={[
-              { header: "Student", render: (f) => f.student?.fullName ?? "—" },
+              {
+                header: "Student",
+                className: "max-w-[140px] truncate",
+                render: (f) => <span title={f.student?.fullName ?? ""}>{f.student?.fullName ?? "—"}</span>,
+              },
               { header: "Category", render: (f) => f.category.replace(/_/g, " ") },
               { header: "Severity", render: (f) => <SeverityBadge severity={f.severity} /> },
-              { header: "Title", render: (f) => f.title },
+              {
+                header: "Title",
+                className: "max-w-[260px] truncate",
+                render: (f) => <span title={f.title}>{f.title}</span>,
+              },
+              {
+                header: "Assigned To",
+                className: "max-w-[140px] truncate",
+                render: (f) => <span title={f.assignedTo?.name ?? ""}>{f.assignedTo?.name ?? "—"}</span>,
+              },
               { header: "Raised", render: (f) => new Date(f.createdAt).toLocaleDateString() },
             ]}
           />

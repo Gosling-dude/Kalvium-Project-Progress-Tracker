@@ -25,7 +25,7 @@ model User {
   email        String   @unique
   passwordHash String
   name         String
-  role         String // ADMIN | TEACHING_NINJA | GROWTH_COACH (see Role enum)
+  role         String // ADMIN (Program Admin) | GROWTH_COACH (see Role enum)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -37,6 +37,7 @@ model User {
   interviewEvals      InterviewEvaluation[]
   deliverableVerifies DeliverableAssignment[]  @relation("DeliverableVerifiedBy")
   growthCoachEvals    GrowthCoachEvaluation[]
+  growthCoachEvalConfirmations GrowthCoachEvaluation[] @relation("GrowthCoachEvalConfirmedBy")
   flagsCreated        Flag[]                    @relation("FlagCreatedBy")
   flagsResolved       Flag[]                    @relation("FlagResolvedBy")
   graduationDecisions GraduationDecision[]
@@ -45,6 +46,8 @@ model User {
   cohortEnrollments   CohortEnrollment[]
   deliverableAssigned DeliverableAssignment[]   @relation("DeliverableCreatedBy")
   studentsCreated     Student[]                 @relation("StudentCreatedBy")
+  flagsAssigned       Flag[]                    @relation("FlagAssignedTo")
+  growthCoachAccount  GrowthCoach?
 
   @@index([role])
 }
@@ -62,16 +65,20 @@ model Campus {
   updatedAt DateTime @updatedAt
 
   students     Student[]
-  cohorts      Cohort[]
   growthCoaches GrowthCoach[]
 }
 
+// A Growth Coach may optionally have a login (User row with role
+// GROWTH_COACH) — set when the Admin wants that coach to sign in and manage
+// their own assigned students' deliverables directly (see spec section 17).
 model GrowthCoach {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
   campusId  String?
   campus    Campus?  @relation(fields: [campusId], references: [id])
+  userId    String?  @unique
+  user      User?    @relation(fields: [userId], references: [id])
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,13 +89,14 @@ model GrowthCoach {
   @@index([campusId])
 }
 
+// A cohort deliberately has no campus of its own — campus is a property of
+// the individual student (Student.campusId), since a single cohort can span
+// students from multiple campuses (spec section 1).
 model Cohort {
   id          String    @id @default(cuid())
   name        String
   code        String    @unique
   description String?
-  campusId    String?
-  campus      Campus?   @relation(fields: [campusId], references: [id])
   startDate   DateTime?
   endDate     DateTime?
   status      String    @default("ACTIVE") // ACTIVE | ARCHIVED | INACTIVE
@@ -98,7 +106,6 @@ model Cohort {
 
   enrollments CohortEnrollment[]
 
-  @@index([campusId])
   @@index([status])
 }
 
@@ -123,8 +130,11 @@ model Student {
   currentStage      String   @default("PROJECT_REVIEW") // Stage enum
   programStatus     String   @default("ONBOARDING") // ProgramStatus enum
 
+  // Batch/year, e.g. "2024" — free text so it can be populated verbatim from
+  // the CSV import and doesn't force a numeric-year assumption.
+  batch             String?
   chosenProject     String?
-  resumeReference   String?
+  resumeLink        String?
   notes             String?
 
   createdById       String?
@@ -137,7 +147,6 @@ model Student {
   videoAssignments    VideoAssignment[]
   interviews          Interview[]
   deliverableAssignments DeliverableAssignment[]
-  checkpoints         Checkpoint[]
   growthCoachEvaluations GrowthCoachEvaluation[]
   flags               Flag[]
   graduationDecisions GraduationDecision[]
@@ -171,7 +180,6 @@ model CohortEnrollment {
   videoAssignments        VideoAssignment[]
   interviews              Interview[]
   deliverableAssignments  DeliverableAssignment[]
-  checkpoints             Checkpoint[]
   growthCoachEvaluations  GrowthCoachEvaluation[]
   graduationDecisions     GraduationDecision[]
 
@@ -421,6 +429,9 @@ model Interview {
   actualStart           DateTime?
   actualEnd             DateTime?
   notes                 String?
+  // Google Meet transcript doc link for this interview (Database Ninja
+  // Interface source doc: "[4] Paste the Google Meet transcript Doc link").
+  transcriptUrl         String?
 
   createdById           String?
   createdAt             DateTime @default(now())
@@ -439,7 +450,7 @@ model InterviewEvaluation {
 
   highestRungHeld     Int?
   breakRung           Int?
-  breakCauseCategory  String?  // TECHNICAL_DEPTH | COMMUNICATION | OWNERSHIP | SCALING | FAILURE_HANDLING | OTHER
+  breakCauseCategory  String?  // KNOWLEDGE_GAP | ARTICULATION_GAP | OWNERSHIP_GAP | EVIDENCE_CLAIM_GAP | OTHER
   breakCauseNotes     String?
   evidence            String?
   communicationRating Int?     // 1-5
@@ -458,47 +469,34 @@ model InterviewEvaluation {
 }
 
 // ------------------------------------------------------------------
-// Deliverables (A2 + Track B) & Checkpoints
+// Deliverables (A2 + Track B)
 // ------------------------------------------------------------------
 
-model DeliverableTemplate {
-  id                  String   @id @default(cuid())
-  key                 String   @unique
-  title               String
-  gapAddressed        String
-  whatStudentMustDo   String
-  expectedOutcome     String
-  submissionType      String   // LINK|TEXT|REPOSITORY|DOCUMENT_URL|VIDEO_URL|FILE_METADATA|OTHER_URL
-  // Free text describing the exact item required (e.g. "1 commit/PR link
-  // showing the completed change, with a 3-5 line caption") — the real
-  // operational workbook uses this as descriptive text, not a yes/no flag.
-  submissionRequired  String
-  submissionDetails   String?
-  verificationCriteria String
-  estimatedTime       String?
-  track               String   // A2 | B | BOTH
-  order               Int      @default(0)
-  active              Boolean  @default(true)
-  version             Int      @default(1)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  assignments         DeliverableAssignment[]
-}
-
+// Every deliverable is written directly for one student — there is no
+// reusable template library (each one is unique to the gap it addresses),
+// and no separate Checkpoint grouping — a student's progress is just "how
+// many of their assigned deliverables are verified" plus the total
+// estimated time across everything currently assigned to them.
 model DeliverableAssignment {
   id                  String   @id @default(cuid())
   studentId           String
   student             Student  @relation(fields: [studentId], references: [id])
   cohortEnrollmentId  String?
   cohortEnrollment    CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
-  templateId          String
-  template            DeliverableTemplate @relation(fields: [templateId], references: [id])
-  templateSnapshot    String   // JSON snapshot of the template at assignment time (historical correctness)
+
+  title                String
+  gapAddressed         String
+  whatStudentMustDo    String
+  expectedOutcome      String
+  submissionRequired   String
+  submissionDetails    String?
+  verificationCriteria String
+  // A2 deliverables are always estimated in HOURS; Track B always in DAYS,
+  // in half-day steps (0.5, 1, 1.5, ...) — enforced in assignDeliverable.
+  estimatedTimeValue   Float
+  estimatedTimeUnit    String // HOURS | DAYS
 
   track               String   // A2 | B
-  checkpointId        String?
-  checkpoint          Checkpoint? @relation(fields: [checkpointId], references: [id])
 
   assignedAt          DateTime @default(now())
   dueAt               DateTime?
@@ -519,32 +517,6 @@ model DeliverableAssignment {
   createdBy           User?    @relation("DeliverableCreatedBy", fields: [createdById], references: [id])
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-
-  @@index([studentId])
-  @@index([checkpointId])
-}
-
-model Checkpoint {
-  id                    String   @id @default(cuid())
-  studentId             String
-  student               Student  @relation(fields: [studentId], references: [id])
-  cohortEnrollmentId    String?
-  cohortEnrollment      CohortEnrollment? @relation(fields: [cohortEnrollmentId], references: [id])
-  track                 String   // A2 | B
-
-  name                  String
-  sequence              Int
-  dueAt                 DateTime?
-  expectedEvidence      String?
-  whatWillBeChecked     String?
-  expectedProgress      String?
-  status                String   @default("PENDING") // PENDING|IN_REVIEW|PASSED|FAILED
-  evaluationNotes       String?
-
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  deliverables          DeliverableAssignment[]
 
   @@index([studentId])
 }
@@ -580,7 +552,18 @@ model GrowthCoachEvaluation {
   evaluatedAt                DateTime @default(now())
   createdAt                  DateTime @default(now())
 
+  // When recorded by a Growth Coach, a SUFFICIENT decision does not move the
+  // student immediately — track/status movement rests with Program Admins.
+  // The transition stays pending until an Admin confirms it (or is applied
+  // immediately, without ever setting this flag, when an Admin records the
+  // evaluation directly).
+  pendingAdminConfirmation   Boolean  @default(false)
+  confirmedAt                DateTime?
+  confirmedById              String?
+  confirmedBy                User?    @relation("GrowthCoachEvalConfirmedBy", fields: [confirmedById], references: [id])
+
   @@index([studentId])
+  @@index([pendingAdminConfirmation])
 }
 
 // ------------------------------------------------------------------
@@ -624,6 +607,11 @@ model Flag {
   createdBy       User     @relation("FlagCreatedBy", fields: [createdById], references: [id])
   createdAt       DateTime @default(now())
 
+  // Who this flag is a to-do item for — surfaced in that admin's Tasks view
+  // (spec sections 15/16) so assignments aren't discovered manually.
+  assignedToId    String?
+  assignedTo      User?    @relation("FlagAssignedTo", fields: [assignedToId], references: [id])
+
   resolvedById    String?
   resolvedBy      User?    @relation("FlagResolvedBy", fields: [resolvedById], references: [id])
   resolvedAt      DateTime?
@@ -631,6 +619,7 @@ model Flag {
 
   @@index([studentId])
   @@index([status])
+  @@index([assignedToId])
 }
 
 // ------------------------------------------------------------------

@@ -40,6 +40,10 @@ export interface EmailRecipientInput {
   variables: Record<string, string>;
   videoAssignmentId?: string;
   interviewId?: string;
+  // When set, sent verbatim instead of being re-rendered from the template —
+  // this is what makes "admin can edit the content before sending" real for
+  // every workflow that reuses this one send path (spec section 19).
+  bodyOverride?: string;
 }
 
 export interface PreviewResult {
@@ -74,6 +78,7 @@ export async function sendEmail(input: {
   recipients: EmailRecipientInput[];
   relatedEntityType?: string;
   relatedEntityId?: string;
+  subjectOverride?: string;
   triggeredById: string;
 }) {
   const template = await prisma.emailTemplate.findUnique({ where: { key: input.templateKey } });
@@ -89,11 +94,13 @@ export async function sendEmail(input: {
     );
   }
 
+  const subject = input.subjectOverride ?? template.subject;
+
   const event = await prisma.emailEvent.create({
     data: {
       templateId: template.id,
       templateKeySnapshot: template.key,
-      subjectRendered: template.subject,
+      subjectRendered: subject,
       relatedEntityType: input.relatedEntityType,
       relatedEntityId: input.relatedEntityId,
       triggeredById: input.triggeredById,
@@ -101,7 +108,7 @@ export async function sendEmail(input: {
         create: input.recipients.map((r) => ({
           studentId: r.studentId,
           emailAddress: r.emailAddress,
-          bodyRendered: renderTemplate(template.bodyHtml, r.variables),
+          bodyRendered: r.bodyOverride ?? renderTemplate(template.bodyHtml, r.variables),
           videoAssignmentId: r.videoAssignmentId,
           interviewId: r.interviewId,
         })),
@@ -117,7 +124,7 @@ export async function sendEmail(input: {
   for (const recipient of event.recipients) {
     const result = await provider.send({
       to: recipient.emailAddress,
-      subject: template.subject,
+      subject,
       html: recipient.bodyRendered,
     });
     await prisma.$transaction([

@@ -6,7 +6,7 @@ export function signToken(userId: string): string {
   return jwt.sign({ sub: userId }, env.jwtSecret, { expiresIn: env.jwtExpiresIn } as jwt.SignOptions);
 }
 
-export async function createUser(role: "ADMIN" | "TEACHING_NINJA" | "GROWTH_COACH", email: string) {
+export async function createUser(role: "ADMIN" | "GROWTH_COACH", email: string) {
   return prisma.user.create({
     data: { email, passwordHash: "unused-in-tests", name: email.split("@")[0], role },
   });

@@ -5,7 +5,7 @@ import { PROJECT_REVIEW_RUBRIC_V1 } from "../src/domain/constants/rubric";
 import { seedAdminUser, seedBaselineReferenceData } from "../src/domain/services/systemSeed.service";
 import { createProjectReview, completeProjectReview } from "../src/domain/services/projectReview.service";
 import { assignVideoQuestionSet, recordQuestionEvaluation, finalizeVideoAssessment } from "../src/domain/services/videoAssessment.service";
-import { recordGrowthCoachEvaluation, assignDeliverable, createCheckpoint } from "../src/domain/services/developmentTrack.service";
+import { recordGrowthCoachEvaluation, assignDeliverable } from "../src/domain/services/developmentTrack.service";
 import { scheduleInterview, recordInterviewEvaluation, completeInterview } from "../src/domain/services/interview.service";
 import { recordGraduationDecision } from "../src/domain/services/graduation.service";
 import { createFlag } from "../src/domain/services/flag.service";
@@ -24,22 +24,29 @@ async function seedDevData(adminId: string) {
   const bangalore = await prisma.campus.create({ data: { name: "Bangalore Campus", code: "BLR" } });
   const pune = await prisma.campus.create({ data: { name: "Pune Campus", code: "PUN" } });
 
-  const coach1 = await prisma.growthCoach.create({ data: { name: "Asha Rao", email: "asha.rao@kalvium.example", campusId: bangalore.id } });
+  // coach1 gets a real login (role GROWTH_COACH) to demonstrate the Growth
+  // Coach portal; coach2 stays reference-data-only, showing a login is optional.
+  const coach1User = await prisma.user.create({
+    data: { email: "asha.rao@kalvium.example", passwordHash: await bcrypt.hash("ChangeMe123!", 12), name: "Asha Rao", role: "GROWTH_COACH" },
+  });
+  const coach1 = await prisma.growthCoach.create({ data: { name: "Asha Rao", email: "asha.rao@kalvium.example", campusId: bangalore.id, userId: coach1User.id } });
   const coach2 = await prisma.growthCoach.create({ data: { name: "Vikram Shah", email: "vikram.shah@kalvium.example", campusId: pune.id } });
 
   const cohort1 = await prisma.cohort.create({
-    data: { name: "SPE 2024 Batch 1", code: "SPE-2024-B1", campusId: bangalore.id, startDate: new Date("2024-01-15"), status: "ACTIVE" },
+    data: { name: "SPE 2024 Batch 1", code: "SPE-2024-B1", startDate: new Date("2024-01-15"), status: "ACTIVE" },
   });
   const cohort2 = await prisma.cohort.create({
-    data: { name: "SPE 2024 Batch 2", code: "SPE-2024-B2", campusId: pune.id, startDate: new Date("2024-06-01"), status: "ACTIVE" },
+    data: { name: "SPE 2024 Batch 2", code: "SPE-2024-B2", startDate: new Date("2024-06-01"), status: "ACTIVE" },
   });
 
+  // Interviewers are Program Admin accounts (Teaching Ninja was merged into
+  // the Admin role) — the interviewer relation just points at any User.
   const interviewer = await prisma.user.create({
     data: {
       email: "ninja.priya@kalvium.example",
       passwordHash: await bcrypt.hash("ChangeMe123!", 12),
       name: "Priya Menon",
-      role: "TEACHING_NINJA",
+      role: "ADMIN",
     },
   });
   const interviewer2 = await prisma.user.create({
@@ -47,42 +54,9 @@ async function seedDevData(adminId: string) {
       email: "ninja.arjun@kalvium.example",
       passwordHash: await bcrypt.hash("ChangeMe123!", 12),
       name: "Arjun Nair",
-      role: "TEACHING_NINJA",
+      role: "ADMIN",
     },
   });
-
-  const deliverableTemplates = await Promise.all(
-    [
-      {
-        key: "FOUNDATIONS_DSA_REFRESH",
-        title: "Data Structures Refresh",
-        gapAddressed: "Weak fundamentals in core data structures observed during review.",
-        whatStudentMustDo: "Complete 10 practice problems covering arrays, linked lists, and trees; document your approach.",
-        expectedOutcome: "Can explain and implement basic data structure operations without assistance.",
-        submissionType: "REPOSITORY" as const,
-        submissionRequired: "A GitHub repository link containing all 10 solved problems with commit history.",
-        verificationCriteria: "Growth Coach reviews the repository and a short walkthrough call.",
-        estimatedTime: "6 hours",
-        track: "BOTH" as const,
-        order: 1,
-      },
-      {
-        key: "PROJECT_OWNERSHIP_REBUILD",
-        title: "Rebuild One Feature From Scratch",
-        gapAddressed: "Unable to confidently explain a claimed feature's implementation.",
-        whatStudentMustDo: "Pick one existing project feature and rebuild it independently, without referring to the original.",
-        expectedOutcome: "Student can explain every line of the rebuilt feature.",
-        submissionType: "REPOSITORY" as const,
-        submissionRequired: "1 commit/PR link showing the rebuilt feature, with a short caption explaining the change.",
-        verificationCriteria: "Live walkthrough with Growth Coach; must explain design choices.",
-        estimatedTime: "8 hours",
-        track: "BOTH" as const,
-        order: 2,
-      },
-    ].map((t) =>
-      prisma.deliverableTemplate.create({ data: t }),
-    ),
-  );
 
   // Student 1 — ONBOARDING (no review yet)
   const s1 = await prisma.student.create({
@@ -138,13 +112,37 @@ async function seedDevData(adminId: string) {
     await recordQuestionEvaluation({ videoAssignmentId: s4Assignment.id, questionId: evalRow.questionId, score, notes: "Evaluated against listening criteria.", reviewerId: adminId });
   }
   await finalizeVideoAssessment({ videoAssignmentId: s4Assignment.id, outcomeReason: "Mandatory question Q7 (Technical Fundamentals) scored below 3 — routed to A2 for foundational development.", actorId: adminId });
-  const s4Checkpoint = await createCheckpoint({ studentId: s4.id, track: "A2", name: "Checkpoint 1 — Fundamentals", sequence: 1, dueAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), actorId: adminId });
-  await assignDeliverable({ studentId: s4.id, templateId: deliverableTemplates[0].id, track: "A2", checkpointId: s4Checkpoint.id, dueAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), actorId: adminId });
-  await createFlag({ studentId: s4.id, category: "OTHER", severity: "LOW", title: "Watching progress closely", description: "Student requested extra time due to exam schedule conflicts this week.", actorId: adminId });
+  await assignDeliverable({
+    studentId: s4.id,
+    track: "A2",
+    dueAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    actorId: adminId,
+    direct: {
+      title: "Data Structures Refresh",
+      gapAddressed: "Weak fundamentals in core data structures observed during review.",
+      whatStudentMustDo: "Complete 10 practice problems covering arrays, linked lists, and trees; document your approach.",
+      expectedOutcome: "Can explain and implement basic data structure operations without assistance.",
+      submissionType: "REPOSITORY",
+      submissionRequired: "A GitHub repository link containing all 10 solved problems with commit history.",
+      verificationCriteria: "Growth Coach reviews the repository and a short walkthrough call.",
+      estimatedTimeValue: 6,
+      estimatedTimeUnit: "HOURS",
+    },
+  });
+  await createFlag({ studentId: s4.id, category: "OTHER", severity: "LOW", title: "Watching progress closely", description: "Student requested extra time due to exam schedule conflicts this week.", assignedToId: adminId, actorId: adminId });
 
   // Student 5 — Track B (failed project review)
   const s5 = await prisma.student.create({
-    data: { fullName: "Meera Nambiar", email: "meera.nambiar@student.example", campusId: pune.id, growthCoachId: coach2.id, chosenProject: "Personal Portfolio Site", createdById: adminId },
+    data: {
+      fullName: "Meera Nambiar",
+      email: "meera.nambiar@student.example",
+      campusId: pune.id,
+      growthCoachId: coach2.id,
+      batch: "2024",
+      resumeLink: "https://drive.google.com/file/d/example-meera-resume/view",
+      chosenProject: "Personal Portfolio Site",
+      createdById: adminId,
+    },
   });
   await enrollStudentInCohort({ studentId: s5.id, cohortId: cohort2.id }, adminId);
   const s5Review = await createProjectReview({
@@ -161,6 +159,23 @@ async function seedDevData(adminId: string) {
     { outcomeReason: "Total 26/50 but GitHub/Evidence (1) and Project Depth (2) fall below mandatory minimums — routed to Track B." },
     adminId,
   );
+  await assignDeliverable({
+    studentId: s5.id,
+    track: "B",
+    dueAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+    actorId: adminId,
+    direct: {
+      title: "Build a Defendable Project From Scratch",
+      gapAddressed: "No real, defendable project found during Project Review.",
+      whatStudentMustDo: "Scope and build one original project with a genuine technical problem, deploy it, and document the architecture.",
+      expectedOutcome: "A working, deployed project the student can defend end-to-end under questioning.",
+      submissionType: "REPOSITORY",
+      submissionRequired: "A deployed live link plus a GitHub repository link with a README covering architecture and setup.",
+      verificationCriteria: "Growth Coach reviews the live deployment and a walkthrough of the architecture and code.",
+      estimatedTimeValue: 3,
+      estimatedTimeUnit: "DAYS",
+    },
+  });
   await createFlag({ studentId: s5.id, category: "OWNERSHIP_CONCERN", severity: "MEDIUM", title: "Unverifiable project evidence", description: "No GitHub repository or deployed link could be found matching the resume's project claims.", actorId: adminId });
 
   // Student 6 — Graduated
@@ -181,11 +196,11 @@ async function seedDevData(adminId: string) {
   await finalizeVideoAssessment({ videoAssignmentId: s6Assignment.id, outcomeReason: "Total 50/50 — routed to A1.", actorId: adminId });
   const s6Mock = await scheduleInterview({ studentId: s6.id, interviewType: "MOCK", scheduledStart: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), interviewerId: interviewer.id, growthCoachConfirmationStatus: "CONFIRMED", actorId: adminId });
   await completeInterview(s6Mock.id, {}, adminId);
-  await recordInterviewEvaluation({ interviewId: s6Mock.id, highestRungHeld: 4, evaluatorId: adminId, overallFeedback: "Held R4 (Scaling) confidently; ready for final interview." });
+  await recordInterviewEvaluation({ interviewId: s6Mock.id, highestRungHeld: 3, evaluatorId: adminId, overallFeedback: "Held R3 (Tradeoff) confidently; ready for final interview to confirm R4." });
   const s6Final = await scheduleInterview({ studentId: s6.id, interviewType: "FINAL", scheduledStart: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), interviewerId: interviewer2.id, growthCoachConfirmationStatus: "CONFIRMED", actorId: adminId });
   await completeInterview(s6Final.id, {}, adminId);
-  await recordInterviewEvaluation({ interviewId: s6Final.id, highestRungHeld: 5, evaluatorId: adminId, overallFeedback: "Held R5 (Failure) with strong justification and independent reasoning.", result: "ADVANCE" });
-  await recordGraduationDecision({ studentId: s6.id, decision: "GRADUATE", reason: "Combined mock (R4) and final (R5) interview performance exceeds graduation threshold.", relatedInterviewIds: [s6Mock.id, s6Final.id], actorId: adminId });
+  await recordInterviewEvaluation({ interviewId: s6Final.id, highestRungHeld: 4, evaluatorId: adminId, overallFeedback: "Held R4 (Scale & Failure) with strong justification and independent reasoning.", result: "ADVANCE" });
+  await recordGraduationDecision({ studentId: s6.id, decision: "GRADUATE", reason: "Combined mock (R3) and final (R4) interview performance exceeds graduation threshold.", relatedInterviewIds: [s6Mock.id, s6Final.id], actorId: adminId });
 
   // Student 7 — Future Pipeline (not graduated)
   const s7 = await prisma.student.create({
@@ -205,7 +220,7 @@ async function seedDevData(adminId: string) {
   await finalizeVideoAssessment({ videoAssignmentId: s7Assignment.id, outcomeReason: "Total 40/50 — routed to A1.", actorId: adminId });
   const s7Final = await scheduleInterview({ studentId: s7.id, interviewType: "FINAL", scheduledStart: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), interviewerId: interviewer2.id, growthCoachConfirmationStatus: "CONFIRMED", actorId: adminId });
   await completeInterview(s7Final.id, {}, adminId);
-  await recordInterviewEvaluation({ interviewId: s7Final.id, highestRungHeld: 3, breakRung: 3, breakCauseCategory: "TECHNICAL_DEPTH", breakCauseNotes: "Could not justify trade-off decisions under questioning.", evaluatorId: adminId, overallFeedback: "Broke at R3 (Trade-offs); needs another cycle before final decision.", result: "REPEAT" });
+  await recordInterviewEvaluation({ interviewId: s7Final.id, highestRungHeld: 3, breakRung: 3, breakCauseCategory: "KNOWLEDGE_GAP", breakCauseNotes: "Could not justify trade-off decisions under questioning.", evaluatorId: adminId, overallFeedback: "Broke at R3 (Tradeoff); needs another cycle before final decision.", result: "REPEAT" });
   await recordGraduationDecision({ studentId: s7.id, decision: "NOT_GRADUATE", reason: "Broke at R3 in final interview; performance below graduation threshold — placed in Future Pipeline for re-evaluation.", relatedInterviewIds: [s7Final.id], actorId: adminId });
 
   // Student 8 — Track B, continuing loop (Growth Coach: not sufficient)
@@ -227,7 +242,7 @@ async function seedDevData(adminId: string) {
     actorId: adminId,
   });
 
-  console.log("Seeded dev sample data: 2 campuses, 2 growth coaches, 2 cohorts, 2 deliverable templates, 8 students across every stage.");
+  console.log("Seeded dev sample data: 2 campuses, 2 growth coaches, 2 cohorts, 3 deliverable templates, 8 students across every stage.");
 }
 
 async function main() {

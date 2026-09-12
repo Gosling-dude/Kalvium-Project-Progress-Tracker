@@ -52,7 +52,12 @@ growthCoachRouter.get(
 growthCoachRouter.post(
   "/",
   asyncHandler(async (req, res) => {
-    const schema = z.object({ name: z.string().min(1), email: z.string().email(), campusId: z.string().optional() });
+    const schema = z.object({
+      name: z.string().min(1),
+      email: z.string().email(),
+      campusId: z.string().optional(),
+      password: z.string().min(8).optional(),
+    });
     const input = schema.parse(req.body);
     res.status(201).json({ data: await createGrowthCoach(input, req.user!.id) });
   }),
@@ -66,6 +71,7 @@ growthCoachRouter.patch(
       email: z.string().email().optional(),
       campusId: z.string().nullable().optional(),
       active: z.boolean().optional(),
+      password: z.string().min(8).optional(),
     });
     const input = schema.parse(req.body);
     res.json({ data: await updateGrowthCoach(req.params.id, input, req.user!.id) });

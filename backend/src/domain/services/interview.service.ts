@@ -10,7 +10,7 @@ import type {
 } from "../constants/enums";
 
 const MIN_RUNG = 1;
-const MAX_RUNG = 5;
+const MAX_RUNG = 4;
 
 export async function scheduleInterview(input: {
   studentId: string;
@@ -152,10 +152,15 @@ export async function recordInterviewEvaluation(input: {
   weaknesses?: string;
   overallFeedback: string;
   result?: InterviewResult;
+  transcriptUrl?: string;
   evaluatorId: string;
 }) {
   const interview = await prisma.interview.findUnique({ where: { id: input.interviewId } });
   if (!interview) throw new NotFoundError("Interview", input.interviewId);
+
+  if (input.transcriptUrl !== undefined) {
+    await prisma.interview.update({ where: { id: input.interviewId }, data: { transcriptUrl: input.transcriptUrl } });
+  }
 
   if (!input.overallFeedback || input.overallFeedback.trim().length < 10) {
     throw new ValidationError("Overall feedback must be specific and evidence-based (at least 10 characters).");
@@ -165,15 +170,15 @@ export async function recordInterviewEvaluation(input: {
     ["Break rung", input.breakRung],
   ] as const) {
     if (value !== undefined && (value < MIN_RUNG || value > MAX_RUNG)) {
-      throw new ValidationError(`${label} must be between ${MIN_RUNG} (R1) and ${MAX_RUNG} (R5).`);
+      throw new ValidationError(`${label} must be between ${MIN_RUNG} (R1 Explain) and ${MAX_RUNG} (R4 Scale & Failure).`);
     }
   }
   if (
     input.breakRung !== undefined &&
     input.highestRungHeld !== undefined &&
-    input.breakRung > input.highestRungHeld
+    input.breakRung <= input.highestRungHeld
   ) {
-    throw new ValidationError("Break rung cannot exceed the highest rung held.");
+    throw new ValidationError("Break rung must be higher than the highest rung held.");
   }
   if (input.communicationRating !== undefined && (input.communicationRating < 1 || input.communicationRating > 5)) {
     throw new ValidationError("Communication rating must be between 1 and 5.");

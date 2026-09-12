@@ -24,6 +24,8 @@ import { auditRouter } from "./routes/audit.routes";
 import { dashboardRouter } from "./routes/dashboard.routes";
 import { importRouter, exportRouter } from "./routes/importExport.routes";
 import { settingsRouter } from "./routes/settings.routes";
+import { tasksRouter } from "./routes/tasks.routes";
+import { userRouter } from "./routes/user.routes";
 
 export function createApp() {
   const app = express();
@@ -60,6 +62,8 @@ export function createApp() {
   app.use("/api/import", importRouter);
   app.use("/api/export", exportRouter);
   app.use("/api/settings", settingsRouter);
+  app.use("/api/tasks", tasksRouter);
+  app.use("/api/users", userRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

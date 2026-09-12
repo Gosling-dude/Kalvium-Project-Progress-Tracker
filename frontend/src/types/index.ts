@@ -22,6 +22,7 @@ export interface GrowthCoach {
   name: string;
   email: string;
   campusId: string | null;
+  userId: string | null;
   active: boolean;
   campus?: { id: string; name: string } | null;
 }
@@ -34,26 +35,64 @@ export interface Cohort {
   status: "ACTIVE" | "ARCHIVED" | "INACTIVE";
   startDate: string | null;
   endDate: string | null;
-  campus?: { id: string; name: string } | null;
   activeStudentCount?: number;
 }
+
+export type DisplayStatus = "Onboarded" | "Track A" | "Track B" | "Graduated";
 
 export interface Student {
   id: string;
   fullName: string;
   email: string;
   phone: string | null;
+  batch: string | null;
   chosenProject: string | null;
+  resumeLink: string | null;
   currentTrack: Track | null;
   currentStage: Stage;
   programStatus: ProgramStatus;
+  displayStatus?: DisplayStatus;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
   campus?: { id: string; name: string } | null;
-  growthCoach?: { id: string; name: string } | null;
+  growthCoach?: { id: string; name: string; email?: string } | null;
   currentCohort?: { id: string; name: string } | null;
   openFlagCount?: number;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "GROWTH_COACH";
+  active?: boolean;
+}
+
+export interface TaskItem {
+  type:
+    | "FLAG_ASSIGNED"
+    | "INTERVIEW_UPCOMING"
+    | "DELIVERABLE_ASSIGNED"
+    | "DELIVERABLE_AWAITING_REVIEW"
+    | "GROWTH_COACH_EVALUATION_PENDING"
+    | "STUDENT_TIMELINE_UPDATE";
+  title: string;
+  detail?: string;
+  studentId: string;
+  studentName: string;
+  entityType: string;
+  entityId: string;
+  at: string;
+}
+
+export interface CohortDashboard {
+  trackACount: number;
+  trackBCount: number;
+  graduatedCount: number;
+  unassignedCount: number;
+  trackABreakdown: { unassignedSubTrack: number; a1: number; a2: number };
+  totalActiveStudents: number;
 }
 
 export interface Pagination {
@@ -73,6 +112,7 @@ export interface Flag {
   status: "OPEN" | "RESOLVED";
   createdAt: string;
   createdBy?: { id: string; name: string };
+  assignedTo?: { id: string; name: string } | null;
   resolvedBy?: { id: string; name: string } | null;
   resolutionNote?: string | null;
   student?: { id: string; fullName: string; email: string };
@@ -88,20 +128,3 @@ export interface TimelineEvent {
   entityId: string;
 }
 
-export interface DashboardSummary {
-  tracks: { A: number; A1: number; A2: number; B: number };
-  programStatus: Record<ProgramStatus, number>;
-  cohorts: { id: string; name: string; activeStudentCount: number }[];
-  actionQueue: {
-    interviewsUpcoming: number;
-    interviewsPendingCompletion: number;
-    incompleteVideoEvaluations: number;
-    pendingDeliverables: number;
-    overdueDeliverables: number;
-    activeFlags: number;
-    recentTrackChanges7d: number;
-    studentsInDevelopmentLoop: number;
-    studentsAwaitingGraduationDecision: number;
-  };
-  stuckStudents: { id: string; fullName: string; currentTrack: Track | null; currentStage: Stage; daysSinceUpdate: number }[];
-}

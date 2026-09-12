@@ -3,7 +3,7 @@ import { z } from "zod";
 import { asyncHandler } from "../lib/asyncHandler";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { FLAG_CATEGORY, FLAG_SEVERITY } from "../domain/constants/enums";
-import { createFlag, listOpenFlags, resolveFlag } from "../domain/services/flag.service";
+import { createFlag, listFlagsAssignedTo, listOpenFlags, resolveFlag } from "../domain/services/flag.service";
 
 export const flagRouter = Router();
 flagRouter.use(requireAuth, requireRole("ADMIN"));
@@ -12,6 +12,13 @@ flagRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
     res.json({ data: await listOpenFlags() });
+  }),
+);
+
+flagRouter.get(
+  "/assigned-to-me",
+  asyncHandler(async (req, res) => {
+    res.json({ data: await listFlagsAssignedTo(req.user!.id) });
   }),
 );
 
@@ -24,6 +31,7 @@ flagRouter.post(
       severity: z.enum(FLAG_SEVERITY),
       title: z.string().min(1),
       description: z.string().min(1),
+      assignedToId: z.string().optional(),
     });
     const input = schema.parse(req.body);
     res.status(201).json({ data: await createFlag({ ...input, actorId: req.user!.id }) });

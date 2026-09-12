@@ -8,18 +8,23 @@ import {
   createCohort,
   enrollStudentInCohort,
   getCohort,
+  getCohortDashboard,
   listCohorts,
+  removeStudentFromCohort,
   updateCohort,
 } from "../domain/services/cohort.service";
 
 export const cohortRouter = Router();
-cohortRouter.use(requireAuth, requireRole("ADMIN"));
+cohortRouter.use(requireAuth);
+
+// A Growth Coach only needs cohort names (e.g. for the Students filter) —
+// every mutation and the cross-student dashboard stay Admin-only.
+const adminOnly = requireRole("ADMIN");
 
 const cohortInputSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1),
   description: z.string().optional(),
-  campusId: z.string().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   notes: z.string().optional(),
@@ -35,6 +40,7 @@ cohortRouter.get(
 
 cohortRouter.post(
   "/",
+  adminOnly,
   asyncHandler(async (req, res) => {
     const input = cohortInputSchema.parse(req.body);
     res.status(201).json({ data: await createCohort(input, req.user!.id) });
@@ -48,8 +54,17 @@ cohortRouter.get(
   }),
 );
 
+cohortRouter.get(
+  "/:id/dashboard",
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    res.json({ data: await getCohortDashboard(req.params.id) });
+  }),
+);
+
 cohortRouter.patch(
   "/:id",
+  adminOnly,
   asyncHandler(async (req, res) => {
     const input = cohortInputSchema.partial().extend({ status: z.enum(COHORT_STATUS).optional() }).parse(req.body);
     res.json({ data: await updateCohort(req.params.id, input, req.user!.id) });
@@ -58,6 +73,7 @@ cohortRouter.patch(
 
 cohortRouter.post(
   "/:id/enroll",
+  adminOnly,
   asyncHandler(async (req, res) => {
     const schema = z.object({ studentId: z.string().min(1), reason: z.string().optional() });
     const input = schema.parse(req.body);
@@ -67,8 +83,20 @@ cohortRouter.post(
   }),
 );
 
+cohortRouter.delete(
+  "/:id/enroll/:studentId",
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    const schema = z.object({ reason: z.string().optional() });
+    const input = schema.parse(req.body ?? {});
+    await removeStudentFromCohort({ studentId: req.params.studentId, cohortId: req.params.id, reason: input.reason }, req.user!.id);
+    res.status(204).send();
+  }),
+);
+
 cohortRouter.post(
   "/:id/bulk-enroll",
+  adminOnly,
   asyncHandler(async (req, res) => {
     const schema = z.object({ studentIds: z.array(z.string().min(1)), reason: z.string().optional() });
     const input = schema.parse(req.body);

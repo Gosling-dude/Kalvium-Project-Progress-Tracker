@@ -37,13 +37,22 @@ export async function getStudentTimeline(studentId: string): Promise<TimelineEve
     prisma.projectReview.findMany({ where: { studentId }, include: { reviewer: true } }),
     prisma.videoAssignment.findMany({ where: { studentId } }),
     prisma.interview.findMany({ where: { studentId }, include: { evaluation: true, interviewer: true } }),
-    prisma.deliverableAssignment.findMany({ where: { studentId }, include: { template: true } }),
+    prisma.deliverableAssignment.findMany({ where: { studentId } }),
     prisma.growthCoachEvaluation.findMany({ where: { studentId }, include: { recordedBy: true } }),
     prisma.graduationDecision.findMany({ where: { studentId }, include: { decidedBy: true } }),
     prisma.emailRecipient.findMany({ where: { studentId }, include: { emailEvent: { include: { template: true } } } }),
   ]);
 
-  const events: TimelineEvent[] = [];
+  const events: TimelineEvent[] = [
+    {
+      at: student.createdAt,
+      type: "STUDENT_CREATED",
+      title: "Student added",
+      detail: student.resumeLink ? "Resume link on file at creation." : undefined,
+      entityType: "Student",
+      entityId: student.id,
+    },
+  ];
 
   for (const e of enrollments) {
     events.push({
@@ -144,9 +153,15 @@ export async function getStudentTimeline(studentId: string): Promise<TimelineEve
 
   for (const i of interviews) {
     events.push({
-      at: i.createdAt,
+      // Uses updatedAt (not createdAt) so a reschedule bumps this event to
+      // where it belongs in the timeline instead of staying pinned at the
+      // original creation time.
+      at: i.updatedAt,
       type: "INTERVIEW_SCHEDULED",
-      title: `Interview #${i.sequenceNumber} (${i.interviewType}) scheduled`,
+      title: `Interview #${i.sequenceNumber} (${i.interviewType}) — ${i.status.replace(/_/g, " ")}`,
+      detail: i.scheduledStart
+        ? `Scheduled for ${new Date(i.scheduledStart).toLocaleString()} (${i.timezone})`
+        : "Not yet scheduled",
       actor: i.interviewer?.name,
       entityType: "Interview",
       entityId: i.id,
@@ -167,7 +182,7 @@ export async function getStudentTimeline(studentId: string): Promise<TimelineEve
     events.push({
       at: d.assignedAt,
       type: "DELIVERABLE_ASSIGNED",
-      title: `Deliverable assigned: ${d.template.title}`,
+      title: `Deliverable assigned: ${d.title}`,
       entityType: "DeliverableAssignment",
       entityId: d.id,
     });
@@ -175,7 +190,7 @@ export async function getStudentTimeline(studentId: string): Promise<TimelineEve
       events.push({
         at: d.submittedAt,
         type: "DELIVERABLE_SUBMITTED",
-        title: `Deliverable submitted: ${d.template.title}`,
+        title: `Deliverable submitted: ${d.title}`,
         entityType: "DeliverableAssignment",
         entityId: d.id,
       });
@@ -184,7 +199,7 @@ export async function getStudentTimeline(studentId: string): Promise<TimelineEve
       events.push({
         at: d.verifiedAt,
         type: "DELIVERABLE_VERIFIED",
-        title: `Deliverable ${d.verificationStatus.toLowerCase()}: ${d.template.title}`,
+        title: `Deliverable ${d.verificationStatus.toLowerCase()}: ${d.title}`,
         detail: d.feedback ?? undefined,
         entityType: "DeliverableAssignment",
         entityId: d.id,

@@ -14,27 +14,27 @@ const unwrap = (promise: Promise<{ data: { data: any } }>): Promise<any> => prom
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const unwrapFull = (promise: Promise<{ data: any }>): Promise<any> => promise.then((res) => res.data);
 
-// ---- Dashboard ----
-export const fetchDashboard = () => unwrap(api.get("/dashboard"));
-
 // ---- Campuses / Growth Coaches ----
 export const fetchCampuses = (includeInactive = false) => unwrap(api.get(`/campuses?includeInactive=${includeInactive}`));
 export const createCampus = (input: { name: string; code: string }) => unwrap(api.post("/campuses", input));
 export const updateCampus = (id: string, input: Record<string, unknown>) => unwrap(api.patch(`/campuses/${id}`, input));
 
 export const fetchGrowthCoaches = (includeInactive = false) => unwrap(api.get(`/growth-coaches?includeInactive=${includeInactive}`));
-export const createGrowthCoach = (input: { name: string; email: string; campusId?: string }) => unwrap(api.post("/growth-coaches", input));
+export const createGrowthCoach = (input: { name: string; email: string; campusId?: string; password?: string }) => unwrap(api.post("/growth-coaches", input));
 export const updateGrowthCoach = (id: string, input: Record<string, unknown>) => unwrap(api.patch(`/growth-coaches/${id}`, input));
 
 // ---- Cohorts ----
 export const fetchCohorts = (status?: string) => unwrap(api.get(`/cohorts${status ? `?status=${status}` : ""}`));
 export const fetchCohort = (id: string) => unwrap(api.get(`/cohorts/${id}`));
+export const fetchCohortDashboard = (id: string) => unwrap(api.get(`/cohorts/${id}/dashboard`));
 export const createCohort = (input: Record<string, unknown>) => unwrap(api.post("/cohorts", input));
 export const updateCohort = (id: string, input: Record<string, unknown>) => unwrap(api.patch(`/cohorts/${id}`, input));
 export const enrollStudentInCohort = (cohortId: string, studentId: string, reason?: string) =>
   unwrap(api.post(`/cohorts/${cohortId}/enroll`, { studentId, reason }));
 export const bulkEnrollStudents = (cohortId: string, studentIds: string[], reason?: string) =>
   unwrap(api.post(`/cohorts/${cohortId}/bulk-enroll`, { studentIds, reason }));
+export const removeStudentFromCohort = (cohortId: string, studentId: string, reason?: string) =>
+  api.delete(`/cohorts/${cohortId}/enroll/${studentId}`, { data: { reason } });
 
 // ---- Students ----
 export interface StudentListParams {
@@ -44,6 +44,7 @@ export interface StudentListParams {
   growthCoachId?: string;
   track?: string;
   programStatus?: string;
+  batch?: string;
   hasOpenFlags?: boolean;
   page?: number;
   pageSize?: number;
@@ -54,6 +55,7 @@ export const fetchStudents = (params: StudentListParams) =>
 export const fetchStudentDetail = (id: string) => unwrap(api.get(`/students/${id}/detail`));
 export const createStudent = (input: Record<string, unknown>) => unwrap(api.post("/students", input));
 export const updateStudent = (id: string, input: Record<string, unknown>) => unwrap(api.patch(`/students/${id}`, input));
+export const deleteStudent = (id: string) => api.delete(`/students/${id}`);
 
 // ---- Project Review ----
 export const fetchRubric = () => unwrap(api.get("/project-reviews/rubric"));
@@ -79,21 +81,23 @@ export const updateInterview = (id: string, input: Record<string, unknown>) => u
 export const completeInterview = (id: string, input: Record<string, unknown>) => unwrap(api.post(`/interviews/${id}/complete`, input));
 export const recordInterviewEvaluation = (id: string, input: Record<string, unknown>) => unwrap(api.post(`/interviews/${id}/evaluation`, input));
 
-// ---- Deliverables ----
-export const fetchDeliverableTemplates = (track?: string) => unwrap(api.get(`/deliverables/templates${track ? `?track=${track}` : ""}`));
-export const createDeliverableTemplate = (input: Record<string, unknown>) => unwrap(api.post("/deliverables/templates", input));
-export const updateDeliverableTemplate = (id: string, input: Record<string, unknown>) => unwrap(api.patch(`/deliverables/templates/${id}`, input));
-export const duplicateDeliverableTemplate = (id: string, newKey: string) => unwrap(api.post(`/deliverables/templates/${id}/duplicate`, { newKey }));
-export const archiveDeliverableTemplate = (id: string) => unwrap(api.post(`/deliverables/templates/${id}/archive`));
+// ---- Deliverables ---- (every deliverable is written directly for one student — no templates)
 export const assignDeliverable = (input: Record<string, unknown>) => unwrap(api.post("/deliverables/assignments", input));
+export const updateDeliverable = (id: string, input: Record<string, unknown>) => unwrap(api.patch(`/deliverables/assignments/${id}`, input));
+export const deleteDeliverable = (id: string) => api.delete(`/deliverables/assignments/${id}`);
+export const fetchEstimatedTime = (studentId: string, track: string) =>
+  unwrap(api.get("/deliverables/assignments/estimated-time", { params: { studentId, track } }));
+// `ids` selects exactly which assigned deliverables go into this email — omit for every one currently assigned.
+export const fetchDeliverablesTable = (studentId: string, track: string, ids?: string[]) =>
+  unwrap(api.get("/deliverables/assignments/table", { params: { studentId, track, ids: ids?.join(",") } }));
 export const recordDeliverableSubmission = (id: string, submissionFromStudent: string) =>
   unwrap(api.post(`/deliverables/assignments/${id}/submission`, { submissionFromStudent }));
 export const verifyDeliverable = (id: string, input: Record<string, unknown>) => unwrap(api.post(`/deliverables/assignments/${id}/verify`, input));
-export const createCheckpoint = (input: Record<string, unknown>) => unwrap(api.post("/deliverables/checkpoints", input));
-export const evaluateCheckpoint = (id: string, input: Record<string, unknown>) => unwrap(api.post(`/deliverables/checkpoints/${id}/evaluate`, input));
 
 // ---- Growth Coach Evaluations ----
 export const recordGrowthCoachEvaluation = (input: Record<string, unknown>) => unwrap(api.post("/growth-coach-evaluations", input));
+export const confirmGrowthCoachEvaluation = (id: string) => unwrap(api.post(`/growth-coach-evaluations/${id}/confirm`));
+export const dismissGrowthCoachEvaluation = (id: string) => unwrap(api.post(`/growth-coach-evaluations/${id}/dismiss`));
 
 // ---- Graduation ----
 export const recordGraduationDecision = (input: Record<string, unknown>) => unwrap(api.post("/graduation-decisions", input));
@@ -113,6 +117,19 @@ export const fetchEmailEvents = (page = 1) => unwrapFull(api.get("/email/events"
 // ---- Audit ----
 export const fetchAudit = (params: { page?: number; entityType?: string; entityId?: string } = {}) =>
   unwrapFull(api.get("/audit", { params }));
+
+// ---- Users (for interviewer / flag-assignee pickers, and account management) ----
+export const fetchUsers = (role?: string, includeInactive = false) => unwrap(api.get("/users", { params: { role, includeInactive } }));
+export const createAdminUser = (input: { name: string; email: string; password: string }) => unwrap(api.post("/users", input));
+export const activateUser = (id: string) => unwrap(api.post(`/users/${id}/activate`));
+export const deactivateUser = (id: string) => unwrap(api.post(`/users/${id}/deactivate`));
+
+// ---- Account (self-service) ----
+export const changeMyPassword = (currentPassword: string, newPassword: string) =>
+  api.post("/auth/change-password", { currentPassword, newPassword });
+
+// ---- Tasks ----
+export const fetchMyTasks = () => unwrap(api.get("/tasks/mine"));
 
 // ---- Settings ----
 export const fetchAppSettings = () => unwrap(api.get("/settings"));

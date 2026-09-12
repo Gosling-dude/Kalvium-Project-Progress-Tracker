@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { NotFoundError, ValidationError } from "../../lib/errors";
 import { recordAuditEvent } from "./audit.service";
 import { enrollStudentInCohort } from "./cohort.service";
+import { deriveDisplayStatus } from "../../lib/displayStatus";
 import type { ProgramStatus, Track } from "../constants/enums";
 
 export interface StudentListFilters {
@@ -12,6 +13,7 @@ export interface StudentListFilters {
   growthCoachId?: string;
   track?: Track;
   programStatus?: ProgramStatus;
+  batch?: string;
   hasOpenFlags?: boolean;
   page?: number;
   pageSize?: number;
@@ -34,6 +36,7 @@ export async function listStudents(filters: StudentListFilters) {
   if (filters.growthCoachId) where.growthCoachId = filters.growthCoachId;
   if (filters.track) where.currentTrack = filters.track;
   if (filters.programStatus) where.programStatus = filters.programStatus;
+  if (filters.batch) where.batch = filters.batch;
   if (filters.cohortId) {
     where.cohortEnrollments = { some: { cohortId: filters.cohortId, isActive: true } };
   }
@@ -73,6 +76,7 @@ export async function listStudents(filters: StudentListFilters) {
       ...s,
       currentCohort: s.cohortEnrollments[0]?.cohort ?? null,
       openFlagCount: s._count.flags,
+      displayStatus: deriveDisplayStatus(s),
     })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   };
@@ -84,8 +88,9 @@ export interface CreateStudentInput {
   phone?: string;
   campusId?: string;
   growthCoachId?: string;
+  batch?: string;
   chosenProject?: string;
-  resumeReference?: string;
+  resumeLink?: string;
   notes?: string;
   cohortId?: string;
 }
@@ -101,8 +106,9 @@ export async function createStudent(input: CreateStudentInput, actorId: string) 
       phone: input.phone,
       campusId: input.campusId,
       growthCoachId: input.growthCoachId,
+      batch: input.batch,
       chosenProject: input.chosenProject,
-      resumeReference: input.resumeReference,
+      resumeLink: input.resumeLink,
       notes: input.notes,
       createdById: actorId,
     },
@@ -148,6 +154,70 @@ export async function updateStudent(
   return updated;
 }
 
+// Permanently erases a student and every record that exists only because of
+// them — enrollment history, reviews, video/interview evaluations,
+// deliverables, flags, graduation decisions, and their email recipient/
+// delivery rows. This is a hard, irreversible delete (not the
+// normal append-only history model used everywhere else in this app), so it
+// exists only for genuine "this record should never have existed" cases —
+// removing someone from a cohort while keeping their history is
+// `removeStudentFromCohort` instead. Deletion order matters: every table
+// below is deleted child-first so no foreign key is ever left dangling.
+export async function deleteStudent(id: string, actorId: string) {
+  const student = await prisma.student.findUnique({ where: { id } });
+  if (!student) throw new NotFoundError("Student", id);
+
+  await prisma.$transaction(async (tx) => {
+    const [projectReviews, videoAssignments, interviews] = await Promise.all([
+      tx.projectReview.findMany({ where: { studentId: id }, select: { id: true } }),
+      tx.videoAssignment.findMany({ where: { studentId: id }, select: { id: true } }),
+      tx.interview.findMany({ where: { studentId: id }, select: { id: true } }),
+    ]);
+    const projectReviewIds = projectReviews.map((r) => r.id);
+    const videoAssignmentIds = videoAssignments.map((v) => v.id);
+    const interviewIds = interviews.map((i) => i.id);
+
+    const emailRecipients = await tx.emailRecipient.findMany({
+      where: {
+        OR: [
+          { studentId: id },
+          { videoAssignmentId: { in: videoAssignmentIds } },
+          { interviewId: { in: interviewIds } },
+        ],
+      },
+      select: { id: true },
+    });
+    const emailRecipientIds = emailRecipients.map((r) => r.id);
+
+    await tx.emailDeliveryAttempt.deleteMany({ where: { emailRecipientId: { in: emailRecipientIds } } });
+    await tx.emailRecipient.deleteMany({ where: { id: { in: emailRecipientIds } } });
+
+    await tx.projectReviewScore.deleteMany({ where: { projectReviewId: { in: projectReviewIds } } });
+    await tx.videoQuestionEvaluation.deleteMany({ where: { videoAssignmentId: { in: videoAssignmentIds } } });
+    await tx.interviewEvaluation.deleteMany({ where: { interviewId: { in: interviewIds } } });
+
+    await tx.projectReview.deleteMany({ where: { studentId: id } });
+    await tx.videoAssignment.deleteMany({ where: { studentId: id } });
+    await tx.interview.deleteMany({ where: { studentId: id } });
+    await tx.deliverableAssignment.deleteMany({ where: { studentId: id } });
+    await tx.growthCoachEvaluation.deleteMany({ where: { studentId: id } });
+    await tx.graduationDecision.deleteMany({ where: { studentId: id } });
+    await tx.flag.deleteMany({ where: { studentId: id } });
+    await tx.trackTransition.deleteMany({ where: { studentId: id } });
+    await tx.cohortEnrollment.deleteMany({ where: { studentId: id } });
+
+    await tx.student.delete({ where: { id } });
+  });
+
+  await recordAuditEvent({
+    actorId,
+    action: "STUDENT_DELETED",
+    entityType: "Student",
+    entityId: id,
+    before: { fullName: student.fullName, email: student.email },
+  });
+}
+
 export async function getStudentSummary(id: string) {
   const student = await prisma.student.findUnique({
     where: { id },
@@ -159,5 +229,5 @@ export async function getStudentSummary(id: string) {
     },
   });
   if (!student) throw new NotFoundError("Student", id);
-  return { ...student, currentCohort: student.cohortEnrollments[0]?.cohort ?? null };
+  return { ...student, currentCohort: student.cohortEnrollments[0]?.cohort ?? null, displayStatus: deriveDisplayStatus(student) };
 }

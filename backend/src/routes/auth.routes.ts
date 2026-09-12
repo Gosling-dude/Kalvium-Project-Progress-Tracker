@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../lib/asyncHandler";
-import { login } from "../domain/services/auth.service";
+import { changePassword, login } from "../domain/services/auth.service";
 import { requireAuth } from "../middleware/auth";
 import { env } from "../config/env";
 
@@ -33,3 +33,15 @@ authRouter.post("/logout", (_req, res) => {
 authRouter.get("/me", requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
+
+const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });
+
+authRouter.post(
+  "/change-password",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+    await changePassword(req.user!.id, currentPassword, newPassword);
+    res.status(204).send();
+  }),
+);

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
-import { UnauthorizedError } from "../../lib/errors";
+import { UnauthorizedError, ValidationError } from "../../lib/errors";
 import { env } from "../../config/env";
 
 const SALT_ROUNDS = 12;
@@ -22,4 +22,14 @@ export async function login(email: string, password: string) {
     token,
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
   };
+}
+
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new UnauthorizedError();
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) throw new ValidationError("Current password is incorrect.");
+
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash: await hashPassword(newPassword) } });
 }

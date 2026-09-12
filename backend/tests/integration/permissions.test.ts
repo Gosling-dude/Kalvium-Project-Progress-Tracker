@@ -18,10 +18,17 @@ describe("Authorization", () => {
     expect(res.status).toBe(200);
   });
 
-  it("rejects a TEACHING_NINJA from admin-only endpoints (future-role scaffolding)", async () => {
-    const ninja = await createUser("TEACHING_NINJA", "ninja@kalvium.example");
-    const token = signToken(ninja.id);
-    const res = await request(app).get("/api/students").set("Authorization", `Bearer ${token}`);
+  it("allows a GROWTH_COACH to reach endpoints shared with Admin", async () => {
+    const coach = await createUser("GROWTH_COACH", "coach-perm@kalvium.example");
+    const token = signToken(coach.id);
+    const res = await request(app).get("/api/tasks/mine").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+  });
+
+  it("rejects a GROWTH_COACH from admin-only endpoints", async () => {
+    const coach = await createUser("GROWTH_COACH", "coach-perm2@kalvium.example");
+    const token = signToken(coach.id);
+    const res = await request(app).post("/api/cohorts").set("Authorization", `Bearer ${token}`).send({ name: "X", code: "X1" });
     expect(res.status).toBe(403);
   });
 

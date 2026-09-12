@@ -12,29 +12,37 @@
 | Server state | TanStack Query | Caching, loading/error states, and cache invalidation on mutation — without hand-rolling it per page. |
 | Testing | Vitest + Supertest | Fast, TypeScript-native; Supertest drives the real Express app for permission/route tests. |
 
-## Why the Admin-only scope doesn't require a rewrite later
+## Roles and account isolation
 
 The system is architected around **roles as data, not as separate apps**:
 
-- `User.role` is one of `ADMIN | TEACHING_NINJA | GROWTH_COACH` (see
-  `backend/src/domain/constants/enums.ts`). `requireRole(...)` middleware
-  takes a list of allowed roles per route; today every route lists `ADMIN`
-  only. Adding a Teaching Ninja or Growth Coach experience means writing new
-  routes/pages that call `requireRole("TEACHING_NINJA")` etc. — the auth
-  plumbing, JWT issuance, and permission-checking middleware need no changes.
-- `Interview.interviewerId`, `VideoQuestionEvaluation.reviewerId`,
-  `GrowthCoachEvaluation.evaluatorId` already point at real `User`/
-  `GrowthCoach` rows. A Teaching Ninja login would see "my assigned
-  interviews" by filtering on `interviewerId = currentUser.id` against
-  data that already exists — no schema change.
+- `User.role` is one of `ADMIN | GROWTH_COACH` (see
+  `backend/src/domain/constants/enums.ts`). ADMIN doubles as "Program Admin"
+  — a standalone Teaching Ninja role was merged into it, since both are
+  program-side staff with the same access; Growth Coach is the only role
+  scoped to specific students. `requireRole(...)` middleware takes a list of
+  allowed roles per route.
+- A Program Admin creates every account from Settings: Growth Coach accounts
+  via `POST /growth-coaches` (creates the `GrowthCoach` reference row and,
+  when a password is supplied, a linked `User` login), and other Program
+  Admin accounts via `POST /users`.
 - `GrowthCoach` is a first-class entity (not a free-text field on `Student`)
-  specifically so a future Growth Coach login can be tied to that same row.
+  so a coach's login (`User`, optional) and their assignable identity
+  (`GrowthCoach`, referenced by `Student.growthCoachId`,
+  `Interview.interviewerId` isn't coach-scoped, `GrowthCoachEvaluation.evaluatorId`)
+  stay the same row. `getGrowthCoachForUserId` is the join point between a
+  logged-in coach and their assigned students.
+- A Growth Coach only ever sees students where `Student.growthCoachId`
+  matches their own `GrowthCoach.id` — enforced server-side in
+  `student.routes.ts` (`assertCanViewStudent`) and mirrored in every
+  coach-writable route (deliverables), not just hidden client-side.
 - Every workflow's *business logic* lives in a domain service
-  (`backend/src/domain/services/*.ts`), not in a route handler. A future
-  Growth Coach-facing route for `recordGrowthCoachEvaluation` would call the
-  exact same service the Admin UI calls today — the routing/promotion rules
-  cannot drift between an Admin-entered evaluation and a future
-  Growth-Coach-entered one, because there is only one implementation.
+  (`backend/src/domain/services/*.ts`), not in a route handler, so the
+  Admin and Growth Coach paths through `recordGrowthCoachEvaluation` (for
+  example) share one implementation and can never drift apart on the
+  routing/promotion rules — only on who is allowed to call it and whether
+  the resulting transition applies immediately or waits for Admin
+  confirmation (see `docs/BUSINESS_RULES.md` section 5).
 
 ## Directory layout
 

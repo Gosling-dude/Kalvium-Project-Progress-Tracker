@@ -9,6 +9,7 @@ export async function createFlag(input: {
   severity: FlagSeverity;
   title: string;
   description: string;
+  assignedToId?: string;
   actorId: string;
 }) {
   const student = await prisma.student.findUnique({ where: { id: input.studentId } });
@@ -19,6 +20,10 @@ export async function createFlag(input: {
   if (!input.description || input.description.trim().length < 10) {
     throw new ValidationError("Flag description must explain the concern (at least 10 characters).");
   }
+  if (input.assignedToId) {
+    const assignee = await prisma.user.findUnique({ where: { id: input.assignedToId } });
+    if (!assignee) throw new NotFoundError("User", input.assignedToId);
+  }
 
   const flag = await prisma.flag.create({
     data: {
@@ -27,6 +32,7 @@ export async function createFlag(input: {
       severity: input.severity,
       title: input.title,
       description: input.description,
+      assignedToId: input.assignedToId ?? null,
       createdById: input.actorId,
     },
   });
@@ -36,10 +42,20 @@ export async function createFlag(input: {
     action: "FLAG_CREATED",
     entityType: "Flag",
     entityId: flag.id,
-    after: { studentId: input.studentId, category: input.category, severity: input.severity },
+    after: { studentId: input.studentId, category: input.category, severity: input.severity, assignedToId: input.assignedToId },
   });
 
   return flag;
+}
+
+// Surfaces in the assignee's Tasks view (spec sections 15/16) so a flag
+// assignment doesn't have to be discovered manually.
+export async function listFlagsAssignedTo(userId: string) {
+  return prisma.flag.findMany({
+    where: { assignedToId: userId, status: "OPEN" },
+    orderBy: [{ severity: "desc" }, { createdAt: "asc" }],
+    include: { student: { select: { id: true, fullName: true, email: true } } },
+  });
 }
 
 export async function resolveFlag(
@@ -80,6 +96,7 @@ export async function listFlagsForStudent(studentId: string) {
     orderBy: { createdAt: "desc" },
     include: {
       createdBy: { select: { id: true, name: true } },
+      assignedTo: { select: { id: true, name: true } },
       resolvedBy: { select: { id: true, name: true } },
     },
   });
@@ -89,6 +106,9 @@ export async function listOpenFlags() {
   return prisma.flag.findMany({
     where: { status: "OPEN" },
     orderBy: [{ severity: "desc" }, { createdAt: "asc" }],
-    include: { student: { select: { id: true, fullName: true, email: true } } },
+    include: {
+      student: { select: { id: true, fullName: true, email: true } },
+      assignedTo: { select: { id: true, name: true } },
+    },
   });
 }

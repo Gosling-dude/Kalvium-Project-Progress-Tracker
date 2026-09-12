@@ -68,8 +68,8 @@ interviewRouter.post(
   "/:id/evaluation",
   asyncHandler(async (req, res) => {
     const schema = z.object({
-      highestRungHeld: z.number().int().min(1).max(5).optional(),
-      breakRung: z.number().int().min(1).max(5).optional(),
+      highestRungHeld: z.number().int().min(1).max(4).optional(),
+      breakRung: z.number().int().min(1).max(4).optional(),
       breakCauseCategory: z.enum(BREAK_CAUSE_CATEGORY).optional(),
       breakCauseNotes: z.string().optional(),
       evidence: z.string().optional(),
@@ -79,6 +79,7 @@ interviewRouter.post(
       weaknesses: z.string().optional(),
       overallFeedback: z.string().min(1),
       result: z.enum(INTERVIEW_RESULT).optional(),
+      transcriptUrl: z.string().optional(),
     });
     const input = schema.parse(req.body);
     res.json({ data: await recordInterviewEvaluation({ ...input, interviewId: req.params.id, evaluatorId: req.user!.id }) });

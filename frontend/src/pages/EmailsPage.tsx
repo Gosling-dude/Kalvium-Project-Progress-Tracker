@@ -109,26 +109,30 @@ function LogPanel() {
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white">
-      <table className="min-w-full divide-y divide-slate-100 text-sm">
-        <tbody className="divide-y divide-slate-100">
-          {data?.data.map((e: { id: string; template?: { name: string }; templateKeySnapshot: string; status: string; recipients: unknown[]; createdAt: string; triggeredBy?: { name: string } }) => (
-            <tr key={e.id}>
-              <td className="px-4 py-2.5 font-medium text-slate-800">{e.template?.name ?? e.templateKeySnapshot}</td>
-              <td className="px-4 py-2.5 text-slate-500">{e.recipients.length} recipient(s)</td>
-              <td className="px-4 py-2.5"><Badge tone={e.status === "SENT" ? "success" : e.status === "FAILED" ? "danger" : "warning"}>{e.status}</Badge></td>
-              <td className="px-4 py-2.5 text-slate-500">{e.triggeredBy?.name}</td>
-              <td className="px-4 py-2.5 text-right text-slate-400">{new Date(e.createdAt).toLocaleString()}</td>
-            </tr>
-          ))}
-          {data?.data.length === 0 && (
-            <tr>
-              <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
-                No emails sent yet.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-100 text-sm">
+          <tbody className="divide-y divide-slate-100">
+            {data?.data.map((e: { id: string; template?: { name: string }; templateKeySnapshot: string; status: string; recipients: unknown[]; createdAt: string; triggeredBy?: { name: string } }) => (
+              <tr key={e.id}>
+                <td className="max-w-[220px] truncate px-4 py-2.5 font-medium text-slate-800" title={e.template?.name ?? e.templateKeySnapshot}>
+                  {e.template?.name ?? e.templateKeySnapshot}
+                </td>
+                <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{e.recipients.length} recipient(s)</td>
+                <td className="whitespace-nowrap px-4 py-2.5"><Badge tone={e.status === "SENT" ? "success" : e.status === "FAILED" ? "danger" : "warning"}>{e.status}</Badge></td>
+                <td className="max-w-[140px] truncate px-4 py-2.5 text-slate-500" title={e.triggeredBy?.name ?? ""}>{e.triggeredBy?.name}</td>
+                <td className="whitespace-nowrap px-4 py-2.5 text-right text-slate-400">{new Date(e.createdAt).toLocaleString()}</td>
+              </tr>
+            ))}
+            {data?.data.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
+                  No emails sent yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
       {data?.pagination && data.pagination.totalPages > 1 && (
         <div className="flex justify-end gap-2 border-t border-slate-100 px-3 py-2 text-sm">
           <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="disabled:opacity-40">
