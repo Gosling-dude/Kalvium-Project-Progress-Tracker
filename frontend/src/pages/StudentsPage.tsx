@@ -1,14 +1,23 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { createStudent, fetchCampuses, fetchCohorts, fetchGrowthCoaches, fetchStudents } from "../lib/queries";
-import { Student, Campus, Cohort, GrowthCoach, Pagination } from "../types";
+import {
+  createStudent,
+  fetchCampuses,
+  fetchCohorts,
+  fetchGrowthCoaches,
+  fetchProgramTrackSummary,
+  fetchStudents,
+} from "../lib/queries";
+import { Student, Campus, Cohort, GrowthCoach, Pagination, ProgramTrackSummary } from "../types";
 import { Button } from "../components/ui/Button";
 import { Table, Pager } from "../components/ui/Table";
-import { Spinner, ErrorBanner } from "../components/ui/Feedback";
+import { TableSkeleton, ErrorBanner } from "../components/ui/Feedback";
 import { Badge, ProgramStatusBadge, TrackBadge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
-import { Field, Input, Select } from "../components/ui/Form";
+import { Field, Input, InputWithIcon, Select } from "../components/ui/Form";
+import { PageContainer, PageHeader } from "../components/ui/Page";
+import { Icon, IconName } from "../components/ui/Icon";
 import { apiErrorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -52,31 +61,52 @@ export function StudentsPage() {
     setParams(next);
   }
 
-  return (
-    <div className="mx-auto max-w-6xl space-y-4 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">{isAdmin ? "Students" : "My Students"}</h1>
-          <p className="text-sm text-slate-500">
-            {isAdmin
-              ? "Search, filter, and open a student's full journey. For bulk creation, see Settings → Bulk Upload."
-              : "Students assigned to you. Open one to review deliverables, flags, and their full history."}
-          </p>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-2">
-            <Link to="/settings">
-              <Button variant="secondary">Bulk Upload</Button>
-            </Link>
-            <Button onClick={() => setShowCreate(true)}>New Student</Button>
-          </div>
-        )}
-      </div>
+  const activeFilterCount = [track, programStatus, cohortId, batch].filter(Boolean).length;
 
-      <div className="flex flex-wrap gap-2">
-        <Input
+  // The batch box is deliberately uncontrolled (typing shouldn't fight the URL),
+  // so clearing filters has to remount it for the emptied value to show.
+  const [filterEpoch, setFilterEpoch] = useState(0);
+
+  function clearFilters() {
+    const next = new URLSearchParams();
+    if (search) next.set("search", search);
+    setParams(next);
+    setFilterEpoch((n) => n + 1);
+  }
+
+  return (
+    <PageContainer>
+      <PageHeader
+        icon="students"
+        title={isAdmin ? "Students" : "My Students"}
+        description={
+          isAdmin
+            ? "Search, filter, and open a student's full journey. For bulk creation, see Settings → Bulk Upload."
+            : "Students assigned to you. Open one to review deliverables, flags, and their full history."
+        }
+        actions={
+          isAdmin && (
+            <>
+              <Link to="/settings">
+                <Button variant="secondary" icon="upload">
+                  Bulk Upload
+                </Button>
+              </Link>
+              <Button icon="plus" onClick={() => setShowCreate(true)}>
+                New Student
+              </Button>
+            </>
+          )
+        }
+      />
+
+      {isAdmin && <ProgramTrackPanel />}
+
+      <div className="surface flex flex-wrap items-center gap-2 p-3">
+        <InputWithIcon
+          icon="search"
           placeholder="Search name, email, or project…"
-          className="max-w-xs"
+          wrapperClassName="w-full sm:w-72"
           defaultValue={search}
           onChange={(e) => setParam("search", e.target.value)}
         />
@@ -103,12 +133,33 @@ export function StudentsPage() {
             </option>
           ))}
         </Select>
-        <Input placeholder="Batch (e.g. 2024)" className="w-40" defaultValue={batch} onChange={(e) => setParam("batch", e.target.value)} />
+        <Input
+          key={`batch-${filterEpoch}`}
+          placeholder="Batch (e.g. 2024)"
+          className="w-36"
+          defaultValue={batch}
+          onChange={(e) => setParam("batch", e.target.value)}
+        />
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+          >
+            <Icon name="close" size={13} />
+            Clear {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}
+          </button>
+        )}
+        {data?.pagination && (
+          <span className="ml-auto pr-1 text-xs font-medium tabular text-slate-500">
+            {data.pagination.total ?? data.data.length} result{(data.pagination.total ?? data.data.length) === 1 ? "" : "s"}
+          </span>
+        )}
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white">
+      <div className="surface">
         {isLoading ? (
-          <Spinner />
+          <TableSkeleton rows={8} cols={8} />
         ) : (
           <>
             <Table
@@ -119,10 +170,18 @@ export function StudentsPage() {
               columns={[
                 {
                   header: "Name",
-                  className: "max-w-[160px] truncate",
+                  className: "max-w-[180px] truncate",
                   render: (s) => (
-                    <span className="font-medium text-slate-900" title={s.fullName}>
-                      {s.fullName}
+                    <span className="flex items-center gap-2.5" title={s.fullName}>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-50 to-brand-100 text-2xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200/60">
+                        {s.fullName
+                          .trim()
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((p) => p[0]?.toUpperCase() ?? "")
+                          .join("")}
+                      </span>
+                      <span className="truncate font-medium text-slate-900">{s.fullName}</span>
                     </span>
                   ),
                 },
@@ -136,11 +195,18 @@ export function StudentsPage() {
                   className: "max-w-[140px] truncate",
                   render: (s) => <span title={s.currentCohort?.name ?? ""}>{s.currentCohort?.name ?? "—"}</span>,
                 },
-                { header: "Batch", render: (s) => s.batch ?? "—" },
+                { header: "Batch", render: (s) => s.batch ?? <span className="text-slate-300">—</span> },
                 { header: "Track", render: (s) => <TrackBadge track={s.currentTrack} /> },
-                { header: "Stage", render: (s) => s.currentStage.replace(/_/g, " ") },
+                {
+                  header: "Stage",
+                  render: (s) => <span className="text-xs font-medium text-slate-600">{s.currentStage.replace(/_/g, " ")}</span>,
+                },
                 { header: "Status", render: (s) => <ProgramStatusBadge status={s.programStatus} /> },
-                { header: "Flags", render: (s) => (s.openFlagCount ? <Badge tone="danger">{s.openFlagCount} open</Badge> : "—") },
+                {
+                  header: "Flags",
+                  render: (s) =>
+                    s.openFlagCount ? <Badge tone="danger">{s.openFlagCount} open</Badge> : <span className="text-slate-300">—</span>,
+                },
               ]}
             />
             {data?.pagination && (
@@ -155,12 +221,149 @@ export function StudentsPage() {
           onClose={() => setShowCreate(false)}
           onCreated={(id) => {
             queryClient.invalidateQueries({ queryKey: ["students"] });
+            // A new student changes the program totals too (they land in
+            // "Not yet on a track"), so the panel has to be refetched.
+            queryClient.invalidateQueries({ queryKey: ["program-track-summary"] });
             setShowCreate(false);
             navigate(`/students/${id}`);
           }}
         />
       )}
+    </PageContainer>
+  );
+}
+
+/** A label over a big number — the shape the plain cells in the strip share. */
+function Stat({
+  label,
+  value,
+  icon,
+  toneClassName,
+}: {
+  label: string;
+  value: number;
+  icon: IconName;
+  toneClassName: string;
+}) {
+  return (
+    <>
+      <span className={`flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider ${toneClassName}`}>
+        <Icon name={icon} size={13} />
+        {label}
+      </span>
+      <p className={`mt-1 text-2xl font-semibold tabular ${toneClassName}`}>{value}</p>
+    </>
+  );
+}
+
+/** One of the sub-track cells sitting side by side inside the Track A box. */
+function MiniStat({ label, value, valueClassName }: { label: string; value: number; valueClassName: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-2xs font-medium uppercase leading-tight tracking-wide text-slate-500">{label}</dt>
+      <dd className={`text-base font-semibold tabular ${valueClassName}`}>{value}</dd>
     </div>
+  );
+}
+
+/** A label/number line for the stacked totals cell. */
+function CountRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="text-xs text-slate-600">{label}</dt>
+      <dd className="text-sm font-semibold tabular text-slate-900">{value}</dd>
+    </div>
+  );
+}
+
+// Since-inception totals for the whole program, as a horizontal strip above the
+// filters so the roster below always has an unfiltered reference point over it.
+//
+// Admin-only, for two reasons: /dashboard/track-summary is an ADMIN route, and
+// program-wide numbers sitting over a Growth Coach's own (server-filtered)
+// students would read as though the two were describing the same population.
+function ProgramTrackPanel() {
+  const { data, isLoading, isError } = useQuery<ProgramTrackSummary>({
+    queryKey: ["program-track-summary"],
+    queryFn: fetchProgramTrackSummary,
+  });
+
+  // Five columns rather than four: Track A takes a double-width cell because it
+  // is the only one carrying a nested breakdown, and squeezing A1/A2/no-sub-track
+  // into a quarter of the row leaves all three unreadable at laptop widths.
+  const gridClass = "grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-2 lg:grid-cols-5";
+
+  return (
+    <section className="surface overflow-hidden">
+      <div className="surface-header flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-200/80 px-4 py-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <Icon name="trendUp" size={15} className="text-brand-600" />
+          Program totals
+        </h2>
+        <p className="text-xs text-slate-500">All cohorts · since inception</p>
+      </div>
+
+      {isLoading ? (
+        <div className={gridClass}>
+          <div className="skeleton h-[5.25rem] w-full" />
+          <div className="skeleton h-[5.25rem] w-full sm:col-span-2" />
+          <div className="skeleton h-[5.25rem] w-full" />
+          <div className="skeleton h-[5.25rem] w-full" />
+        </div>
+      ) : isError || !data ? (
+        <p className="px-4 py-4 text-xs text-slate-500">Program totals are unavailable right now.</p>
+      ) : (
+        <div className={gridClass}>
+          <div className="rounded-lg border border-emerald-200/70 bg-emerald-50/50 px-3 py-2.5">
+            <Stat label="Graduated" value={data.graduatedCount} icon="graduation" toneClassName="text-emerald-700" />
+          </div>
+
+          {/* Track A owns its sub-tracks, so A1/A2 are nested inside this cell
+              rather than standing alongside it. The headline number is the
+              roll-up (A + A1 + A2), matching each cohort's own dashboard. */}
+          <div className="rounded-lg border border-blue-200/70 bg-blue-50/40 px-3 py-2.5 sm:col-span-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-blue-700">
+                <Icon name="clipboard" size={13} />
+                Track A
+              </span>
+              <span className="text-2xl font-semibold tabular text-blue-700">{data.trackACount}</span>
+            </div>
+            <dl className="mt-2 grid grid-cols-3 gap-2 border-t border-blue-200/60 pt-2">
+              <MiniStat label="Sub-track A1" value={data.trackABreakdown.a1} valueClassName="text-emerald-600" />
+              <MiniStat label="Sub-track A2" value={data.trackABreakdown.a2} valueClassName="text-amber-600" />
+              <MiniStat
+                label="No sub-track yet"
+                value={data.trackABreakdown.unassignedSubTrack}
+                valueClassName="text-slate-500"
+              />
+            </dl>
+          </div>
+
+          <div className="rounded-lg border border-rose-200/70 bg-rose-50/40 px-3 py-2.5">
+            <Stat label="Track B" value={data.trackBCount} icon="sparkle" toneClassName="text-rose-700" />
+            <p className="mt-0.5 text-2xs text-rose-700/70">No sub-tracks.</p>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+            <span className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-slate-500">
+              <Icon name="students" size={13} />
+              Everyone
+            </span>
+            <dl className="mt-1.5 space-y-1">
+              <CountRow label="Not yet on a track" value={data.notOnTrackCount} />
+              <CountRow label="All students" value={data.totalStudents} />
+            </dl>
+          </div>
+        </div>
+      )}
+
+      <p className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-3 text-2xs leading-relaxed text-slate-500">
+        Covers students across <strong className="font-semibold text-slate-600">all cohorts</strong> who have been part of the
+        Project Defence track from the very start of the program until now — not just the current intake, and not affected by
+        the filters or search below. A graduated student is counted only under Graduated, never also under the track they left.
+      </p>
+    </section>
   );
 }
 
@@ -196,7 +399,7 @@ function CreateStudentModal({ onClose, onCreated }: { onClose: () => void; onCre
   });
 
   return (
-    <Modal open onClose={onClose} title="New Student">
+    <Modal open onClose={onClose} title="New Student" description="Only name and email are required — everything else can be set later.">
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -206,11 +409,11 @@ function CreateStudentModal({ onClose, onCreated }: { onClose: () => void; onCre
         }}
       >
         {error && <ErrorBanner message={error} />}
-        <Field label="Full name">
-          <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        <Field label="Full name" required>
+          <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Asha Menon" />
         </Field>
-        <Field label="Email">
-          <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Field label="Email" required>
+          <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="asha@example.com" />
         </Field>
         <Field label="Chosen project" hint="Optional">
           <Input value={chosenProject} onChange={(e) => setChosenProject(e.target.value)} />
@@ -251,11 +454,11 @@ function CreateStudentModal({ onClose, onCreated }: { onClose: () => void; onCre
             ))}
           </Select>
         </Field>
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" loading={mutation.isPending}>
             {mutation.isPending ? "Creating…" : "Create Student"}
           </Button>
         </div>

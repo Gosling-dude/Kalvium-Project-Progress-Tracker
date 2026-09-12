@@ -3,22 +3,37 @@ import { useNavigate } from "react-router-dom";
 import { fetchOpenFlags } from "../lib/queries";
 import { Flag } from "../types";
 import { Table } from "../components/ui/Table";
-import { SeverityBadge } from "../components/ui/Badge";
-import { Spinner } from "../components/ui/Feedback";
+import { Badge, SeverityBadge } from "../components/ui/Badge";
+import { TableSkeleton } from "../components/ui/Feedback";
+import { PageContainer, PageHeader } from "../components/ui/Page";
 
 export function FlagsPage() {
   const navigate = useNavigate();
   const { data, isLoading } = useQuery<Flag[]>({ queryKey: ["open-flags"], queryFn: fetchOpenFlags });
 
+  const criticalCount = data?.filter((f) => f.severity === "CRITICAL" || f.severity === "HIGH").length ?? 0;
+
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Flags</h1>
-        <p className="text-sm text-slate-500">Open concerns across every student, most severe first.</p>
-      </div>
-      <div className="rounded-lg border border-slate-200 bg-white">
+    <PageContainer width="max-w-5xl">
+      <PageHeader
+        icon="flag"
+        title="Flags"
+        description="Open concerns across every student, most severe first."
+        meta={
+          data &&
+          data.length > 0 && (
+            <>
+              <Badge tone="danger" dot>
+                {data.length} open
+              </Badge>
+              {criticalCount > 0 && <Badge tone="warning">{criticalCount} high or critical</Badge>}
+            </>
+          )
+        }
+      />
+      <div className="surface">
         {isLoading ? (
-          <Spinner />
+          <TableSkeleton rows={6} cols={6} />
         ) : (
           <Table
             rows={data ?? []}
@@ -29,9 +44,16 @@ export function FlagsPage() {
               {
                 header: "Student",
                 className: "max-w-[140px] truncate",
-                render: (f) => <span title={f.student?.fullName ?? ""}>{f.student?.fullName ?? "—"}</span>,
+                render: (f) => (
+                  <span className="font-medium text-slate-900" title={f.student?.fullName ?? ""}>
+                    {f.student?.fullName ?? "—"}
+                  </span>
+                ),
               },
-              { header: "Category", render: (f) => f.category.replace(/_/g, " ") },
+              {
+                header: "Category",
+                render: (f) => <span className="text-xs font-medium text-slate-600">{f.category.replace(/_/g, " ")}</span>,
+              },
               { header: "Severity", render: (f) => <SeverityBadge severity={f.severity} /> },
               {
                 header: "Title",
@@ -41,13 +63,25 @@ export function FlagsPage() {
               {
                 header: "Assigned To",
                 className: "max-w-[140px] truncate",
-                render: (f) => <span title={f.assignedTo?.name ?? ""}>{f.assignedTo?.name ?? "—"}</span>,
+                render: (f) =>
+                  f.assignedTo?.name ? (
+                    <span title={f.assignedTo.name}>{f.assignedTo.name}</span>
+                  ) : (
+                    <span className="text-slate-300">Unassigned</span>
+                  ),
               },
-              { header: "Raised", render: (f) => new Date(f.createdAt).toLocaleDateString() },
+              {
+                header: "Raised",
+                render: (f) => (
+                  <time className="text-xs text-slate-500" dateTime={f.createdAt}>
+                    {new Date(f.createdAt).toLocaleDateString()}
+                  </time>
+                ),
+              },
             ]}
           />
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

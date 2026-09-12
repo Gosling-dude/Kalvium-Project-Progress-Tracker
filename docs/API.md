@@ -127,6 +127,7 @@ there is no template library and no separate checkpoint grouping.
 |---|---|
 | GET | `/audit?page=&pageSize=&entityType=&entityId=` |
 | GET | `/dashboard` — see `DashboardSummary` shape in `frontend/src/types/index.ts` |
+| GET | `/dashboard/track-summary` — program-wide, since-inception track/graduation counts across **all** cohorts; `ProgramTrackSummary` in `frontend/src/types/index.ts`. Track A rolls up A+A1+A2 and GRADUATED wins over the student's last track, matching `/cohorts/:id/dashboard` |
 
 ## Import / Export
 

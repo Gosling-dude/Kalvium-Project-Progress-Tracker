@@ -36,6 +36,10 @@ export const bulkEnrollStudents = (cohortId: string, studentIds: string[], reaso
 export const removeStudentFromCohort = (cohortId: string, studentId: string, reason?: string) =>
   api.delete(`/cohorts/${cohortId}/enroll/${studentId}`, { data: { reason } });
 
+// ---- Dashboard ----
+// Program-wide, since-inception track counts (all cohorts). Admin-only.
+export const fetchProgramTrackSummary = () => unwrap(api.get("/dashboard/track-summary"));
+
 // ---- Students ----
 export interface StudentListParams {
   search?: string;

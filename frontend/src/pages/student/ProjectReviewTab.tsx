@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { completeProjectReview, createProjectReview, fetchRubric, updateProjectReview } from "../../lib/queries";
 import { apiErrorMessage } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
-import { Textarea } from "../../components/ui/Form";
+import { Field, Select, Textarea } from "../../components/ui/Form";
 import { ErrorBanner } from "../../components/ui/Feedback";
 import { Badge } from "../../components/ui/Badge";
 import { Student } from "../../types";
@@ -60,9 +60,9 @@ export function ProjectReviewTab({ student, reviews, onChanged }: { student: Stu
       {draft ? (
         <ReviewForm review={draft} dimensions={rubric?.dimensions ?? []} onChanged={onChanged} />
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+        <div className="surface p-4 text-center">
           <p className="mb-3 text-sm text-slate-600">No review in progress.</p>
-          <Button onClick={() => startMutation.mutate()} disabled={!rubric || startMutation.isPending}>
+          <Button onClick={() => startMutation.mutate()} loading={startMutation.isPending} disabled={!rubric}>
             Start Project Review
           </Button>
         </div>
@@ -72,7 +72,7 @@ export function ProjectReviewTab({ student, reviews, onChanged }: { student: Stu
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-slate-700">Past reviews</h3>
           {completed.map((r) => (
-            <div key={r.id} className="rounded-lg border border-slate-200 bg-white p-4">
+            <div key={r.id} className="surface p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-900">
                   {r.totalScore}/50 · {new Date(r.createdAt).toLocaleDateString()} · {r.reviewer?.name}
@@ -82,7 +82,7 @@ export function ProjectReviewTab({ student, reviews, onChanged }: { student: Stu
               <p className="text-sm text-slate-600">{r.outcomeReason}</p>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {r.scores.map((s) => (
-                  <div key={s.dimensionKey} className="rounded-md bg-slate-50 p-2">
+                  <div key={s.dimensionKey} className="rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-slate-700">{s.dimensionLabel}</span>
                       <span className={s.mandatoryPass === false ? "font-semibold text-rose-600" : "font-semibold text-slate-800"}>
@@ -129,11 +129,24 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
   });
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="surface p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-slate-900">Project / Resume Review</h3>
-        <span className={`text-lg font-bold ${wouldPass ? "text-emerald-600" : "text-rose-600"}`}>{total}/50</span>
+        <span className={`text-lg font-bold tabular ${wouldPass ? "text-emerald-600" : "text-rose-600"}`}>{total}/50</span>
       </div>
+
+      {/* Live score bar with the pass threshold marked, so the reviewer can see
+          where this review stands relative to 25 without doing the arithmetic. */}
+      <div className="relative mb-4 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`h-full rounded-full transition-all duration-300 ease-smooth ${
+            wouldPass ? "bg-gradient-to-r from-emerald-400 to-emerald-500" : "bg-gradient-to-r from-rose-400 to-rose-500"
+          }`}
+          style={{ width: `${Math.min(100, (total / 50) * 100)}%` }}
+        />
+        <span aria-hidden="true" className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-slate-400/70" />
+      </div>
+
       {error && <div className="mb-3"><ErrorBanner message={error} /></div>}
 
       <div className="space-y-3">
@@ -141,14 +154,20 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
           const value = scores[d.key] ?? { score: 0, reason: "" };
           const fails = d.mandatory && value.score < (d.mandatoryMin ?? 0);
           return (
-            <div key={d.key} className="rounded-md border border-slate-100 p-3">
-              <div className="mb-1 flex items-center justify-between">
+            <div
+              className={`rounded-lg border p-3 transition-colors ${
+                fails ? "border-rose-200 bg-rose-50/40" : "border-slate-200/70 hover:border-slate-300"
+              }`}
+              key={d.key}
+            >
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-medium text-slate-800">
                   {d.label} {d.mandatory && <span className="text-xs text-slate-400">(min {d.mandatoryMin}+)</span>}
                 </span>
                 <div className="flex items-center gap-2">
-                  <select
-                    className="rounded border-slate-300 text-sm"
+                  {fails && <Badge tone="danger">Below minimum</Badge>}
+                  <Select
+                    className="w-16"
                     value={value.score}
                     onChange={(e) => setScores((prev) => ({ ...prev, [d.key]: { ...value, score: Number(e.target.value) } }))}
                   >
@@ -157,9 +176,8 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
                         {i}
                       </option>
                     ))}
-                  </select>
-                  <span className="text-xs text-slate-400">/ {d.maxScore}</span>
-                  {fails && <Badge tone="danger">Below minimum</Badge>}
+                  </Select>
+                  <span className="text-xs tabular text-slate-400">/ {d.maxScore}</span>
                 </div>
               </div>
               <Textarea
@@ -173,24 +191,49 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
         })}
       </div>
 
-      <div className="mt-4 rounded-md bg-slate-50 p-3 text-sm">
-        <p>
-          Total: <strong>{total}/50</strong> (threshold 25) — Mandatory minimums:{" "}
-          {mandatoryFailures.length === 0 ? <span className="text-emerald-700">all pass</span> : <span className="text-rose-700">{mandatoryFailures.map((d) => d.label).join(", ")} below minimum</span>}
+      <div
+        className={`mt-4 rounded-lg p-3 text-sm ring-1 ring-inset ${
+          wouldPass ? "bg-emerald-50/60 ring-emerald-200/70" : "bg-rose-50/50 ring-rose-200/70"
+        }`}
+      >
+        <p className="text-slate-700">
+          Total: <strong className="tabular">{total}/50</strong> (threshold 25) — Mandatory minimums:{" "}
+          {mandatoryFailures.length === 0 ? (
+            <span className="font-medium text-emerald-700">all pass</span>
+          ) : (
+            <span className="font-medium text-rose-700">{mandatoryFailures.map((d) => d.label).join(", ")} below minimum</span>
+          )}
         </p>
-        <p className="mt-1 font-medium">Projected outcome: {wouldPass ? "Track A" : "Track B"} (calculated server-side on completion)</p>
+        <p className="mt-1.5 flex items-center gap-1.5 font-medium text-slate-900">
+          Projected outcome:
+          <Badge tone={wouldPass ? "info" : "danger"} dot>
+            {wouldPass ? "Track A" : "Track B"}
+          </Badge>
+          <span className="text-xs font-normal text-slate-500">(calculated server-side on completion)</span>
+        </p>
       </div>
 
       <div className="mt-4">
-        <label className="mb-1 block text-sm font-medium text-slate-700">Final reason (required to complete)</label>
-        <Textarea rows={2} value={outcomeReason} onChange={(e) => setOutcomeReason(e.target.value)} placeholder="Specific, evidence-based classification reason…" />
+        <Field label="Final reason (required to complete)" required>
+          <Textarea
+            rows={2}
+            value={outcomeReason}
+            onChange={(e) => setOutcomeReason(e.target.value)}
+            placeholder="Specific, evidence-based classification reason…"
+          />
+        </Field>
       </div>
 
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="secondary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+      <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <Button variant="secondary" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
           Save Draft
         </Button>
-        <Button onClick={() => completeMutation.mutate()} disabled={completeMutation.isPending || outcomeReason.trim().length < 10}>
+        <Button
+          icon="check"
+          onClick={() => completeMutation.mutate()}
+          loading={completeMutation.isPending}
+          disabled={outcomeReason.trim().length < 10}
+        >
           Complete Review & Route Student
         </Button>
       </div>

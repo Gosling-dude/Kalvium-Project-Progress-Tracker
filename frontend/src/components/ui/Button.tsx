@@ -1,34 +1,63 @@
-import { ButtonHTMLAttributes, forwardRef } from "react";
+import { ButtonHTMLAttributes, forwardRef, ReactNode } from "react";
+import { Icon, IconName } from "./Icon";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
-type Size = "sm" | "md";
+type Variant = "primary" | "secondary" | "danger" | "ghost" | "subtle";
+type Size = "xs" | "sm" | "md" | "lg";
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  primary: "bg-brand-600 text-white hover:bg-brand-700 disabled:bg-brand-300",
-  secondary: "bg-white text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 disabled:text-slate-400",
-  danger: "bg-rose-600 text-white hover:bg-rose-700 disabled:bg-rose-300",
-  ghost: "text-slate-600 hover:bg-slate-100 disabled:text-slate-300",
+  // Gradient + inner highlight gives the primary action real presence without
+  // resorting to a heavier color; the ring keeps its edge crisp on white.
+  primary:
+    "bg-gradient-to-b from-brand-500 to-brand-600 text-white shadow-brand ring-1 ring-inset ring-brand-700/40 hover:from-brand-600 hover:to-brand-700 active:from-brand-700 active:to-brand-700 disabled:from-brand-300 disabled:to-brand-300 disabled:shadow-none disabled:ring-brand-300",
+  secondary:
+    "bg-white text-slate-700 shadow-xs ring-1 ring-inset ring-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:ring-slate-400 active:bg-slate-100 disabled:bg-white disabled:text-slate-400 disabled:shadow-none disabled:ring-slate-200",
+  danger:
+    "bg-gradient-to-b from-rose-500 to-rose-600 text-white shadow-sm ring-1 ring-inset ring-rose-700/40 hover:from-rose-600 hover:to-rose-700 active:from-rose-700 active:to-rose-700 disabled:from-rose-300 disabled:to-rose-300 disabled:shadow-none disabled:ring-rose-300",
+  ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent",
+  subtle:
+    "bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100 hover:bg-brand-100 hover:ring-brand-200 active:bg-brand-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:ring-slate-200",
 };
 
 const SIZE_CLASSES: Record<Size, string> = {
-  sm: "px-2.5 py-1.5 text-sm",
-  md: "px-3.5 py-2 text-sm",
+  xs: "h-7 gap-1 rounded-md px-2 text-xs",
+  sm: "h-8 gap-1.5 rounded-md px-2.5 text-sm",
+  md: "h-9 gap-1.5 rounded-md px-3.5 text-sm",
+  lg: "h-11 gap-2 rounded-lg px-5 text-base",
 };
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  /** Shows a spinner and blocks interaction without changing the button's width. */
+  loading?: boolean;
+  /** Convenience leading icon; `iconRight` places one after the label instead. */
+  icon?: IconName;
+  iconRight?: IconName;
+  children?: ReactNode;
 }
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  { variant = "primary", size = "md", className = "", ...props },
+  { variant = "primary", size = "md", className = "", loading = false, icon, iconRight, disabled, children, ...props },
   ref,
 ) {
+  const iconSize = size === "lg" ? 17 : size === "xs" ? 13 : 15;
   return (
     <button
       ref={ref}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={`group relative inline-flex select-none items-center justify-center whitespace-nowrap font-medium transition-[background-color,box-shadow,color,transform,opacity] duration-150 ease-smooth active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...props}
-    />
+    >
+      {loading && (
+        <span
+          className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+          aria-hidden="true"
+        />
+      )}
+      {!loading && icon && <Icon name={icon} size={iconSize} />}
+      {children}
+      {!loading && iconRight && <Icon name={iconRight} size={iconSize} />}
+    </button>
   );
 });

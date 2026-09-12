@@ -4,8 +4,9 @@ import { completeInterview, fetchUsers, recordInterviewEvaluation, scheduleInter
 import { apiErrorMessage } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
 import { Field, Input, Select, Textarea } from "../../components/ui/Form";
-import { ErrorBanner } from "../../components/ui/Feedback";
+import { ErrorBanner, EmptyState } from "../../components/ui/Feedback";
 import { Badge } from "../../components/ui/Badge";
+import { Icon } from "../../components/ui/Icon";
 import { EmailComposer } from "../../components/EmailComposer";
 import { Student, User } from "../../types";
 
@@ -56,24 +57,46 @@ export function InterviewsTab({ student, interviews, onChanged }: { student: Stu
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        {interviews.length > 0 ? (
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            Interviews
+            <Badge tone="neutral">{interviews.length} of 2</Badge>
+          </h3>
+        ) : (
+          <span />
+        )}
         {canScheduleMore && (
-          <Button onClick={() => setShowSchedule((v) => !v)}>{showSchedule ? "Cancel" : interviews.length === 0 ? "Schedule Mock Interview" : "Schedule Final Interview"}</Button>
+          <Button
+            variant={showSchedule ? "secondary" : "primary"}
+            icon={showSchedule ? "close" : "calendar"}
+            onClick={() => setShowSchedule((v) => !v)}
+          >
+            {showSchedule ? "Cancel" : interviews.length === 0 ? "Schedule Mock Interview" : "Schedule Final Interview"}
+          </Button>
         )}
       </div>
       {showSchedule && (
-        <ScheduleForm
-          studentId={student.id}
-          suggestedType={interviews.length === 0 ? "MOCK" : "FINAL"}
-          onDone={() => {
-            setShowSchedule(false);
-            onChanged();
-          }}
-        />
+        <div className="animate-fade-in">
+          <ScheduleForm
+            studentId={student.id}
+            suggestedType={interviews.length === 0 ? "MOCK" : "FINAL"}
+            onDone={() => {
+              setShowSchedule(false);
+              onChanged();
+            }}
+          />
+        </div>
       )}
 
       {interviews.length === 0 && !showSchedule && (
-        <div className="rounded-lg border border-slate-200 bg-white p-4 text-center text-sm text-slate-500">No interviews scheduled yet.</div>
+        <div className="surface">
+          <EmptyState
+            icon="calendar"
+            title="No interviews scheduled yet"
+            description="Schedule a mock interview to begin the A1 interview sequence."
+          />
+        </div>
       )}
 
       {interviews.map((interview) => (
@@ -98,7 +121,7 @@ function ScheduleForm({ studentId, suggestedType, onDone }: { studentId: string;
   });
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="surface p-4">
       {error && <div className="mb-3"><ErrorBanner message={error} /></div>}
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Type">
@@ -122,7 +145,7 @@ function ScheduleForm({ studentId, suggestedType, onDone }: { studentId: string;
         <Field label="Scheduled start" hint="Optional">
           <Input type="datetime-local" value={scheduledStart} onChange={(e) => setScheduledStart(e.target.value)} />
         </Field>
-        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+        <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>
           Schedule
         </Button>
       </div>
@@ -169,24 +192,37 @@ function InterviewCard({ student, interview, onChanged }: { student: Student; in
   });
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-900">
-          #{interview.sequenceNumber} {interview.interviewType} {interview.interviewer && `· ${interview.interviewer.name}`}
+    <div className="surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2.5 text-sm font-medium text-slate-900">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-2xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-100">
+            #{interview.sequenceNumber}
+          </span>
+          <span className="truncate">
+            {interview.interviewType}
+            {interview.interviewer && <span className="font-normal text-slate-500"> · {interview.interviewer.name}</span>}
+          </span>
         </span>
-        <div className="flex items-center gap-2">
-          <Badge tone={interview.status === "COMPLETED" ? "success" : "info"}>{interview.status}</Badge>
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge tone={interview.status === "COMPLETED" ? "success" : "info"} dot>
+            {interview.status}
+          </Badge>
           {interview.status !== "COMPLETED" && (
-            <Button size="sm" variant="secondary" onClick={() => completeMutation.mutate()}>
+            <Button size="sm" variant="secondary" icon="check" onClick={() => completeMutation.mutate()} loading={completeMutation.isPending}>
               Mark Complete
             </Button>
           )}
         </div>
       </div>
-      {interview.scheduledStart && <p className="mt-1 text-xs text-slate-500">{new Date(interview.scheduledStart).toLocaleString()}</p>}
+      {interview.scheduledStart && (
+        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500">
+          <Icon name="calendar" size={12} className="text-slate-400" />
+          <time dateTime={interview.scheduledStart}>{new Date(interview.scheduledStart).toLocaleString()}</time>
+        </p>
+      )}
 
       {interview.evaluation && !editing ? (
-        <div className="mt-2 rounded-md bg-slate-50 p-2 text-sm">
+        <div className="mt-2 rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60 text-sm">
           <p>
             Highest rung held: {RUNGS.find((r) => r.level === interview.evaluation!.highestRungHeld)?.label ?? "—"}
             {interview.evaluation.breakRung ? ` · Broke at R${interview.evaluation.breakRung}` : ""}

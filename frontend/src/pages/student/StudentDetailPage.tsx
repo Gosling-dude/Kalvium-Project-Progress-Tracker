@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { deleteStudent, fetchStudentDetail } from "../../lib/queries";
 import { apiErrorMessage } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -9,6 +9,8 @@ import { Badge, ProgramStatusBadge, SeverityBadge, TrackBadge } from "../../comp
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { Field, Input } from "../../components/ui/Form";
+import { BackLink, PageContainer, Tabs } from "../../components/ui/Page";
+import { Icon } from "../../components/ui/Icon";
 import { OverviewTab } from "./OverviewTab";
 import { ProjectReviewTab } from "./ProjectReviewTab";
 import { VideoTab } from "./VideoTab";
@@ -48,63 +50,95 @@ export function StudentDetailPage() {
   const s = data.student;
   const openFlags = data.flags.filter((f: { status: string }) => f.status === "OPEN");
 
-  return (
-    <div className="mx-auto max-w-5xl space-y-4 p-6">
-      <Link to="/students" className="text-sm text-brand-600 hover:underline">
-        ← {isAdmin ? "Students" : "My Students"}
-      </Link>
+  const initials = s.fullName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p: string) => p[0]?.toUpperCase() ?? "")
+    .join("");
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">{s.fullName}</h1>
-            <p className="text-sm text-slate-500">{s.email}</p>
-          </div>
-          {isAdmin && (
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setShowMove(true)}>
-                Move Student
-              </Button>
-              <Button variant="danger" onClick={() => setShowDelete(true)}>
-                Delete Student
-              </Button>
+  return (
+    <PageContainer width="max-w-5xl">
+      <BackLink to="/students" label={isAdmin ? "Students" : "My Students"} />
+
+      <div className="surface overflow-hidden">
+        {/* A thin track-coloured spine at the top of the identity card makes the
+            student's current route legible before any text is read. */}
+        <div
+          aria-hidden="true"
+          className={`h-1 w-full ${
+            s.currentTrack === "B"
+              ? "bg-gradient-to-r from-rose-400 to-rose-500"
+              : s.currentTrack === "A2"
+                ? "bg-gradient-to-r from-amber-400 to-amber-500"
+                : s.currentTrack === "A1"
+                  ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
+                  : s.currentTrack === "A"
+                    ? "bg-gradient-to-r from-blue-400 to-blue-500"
+                    : "bg-slate-200"
+          }`}
+        />
+        <div className="p-4 sm:p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-base font-bold text-white shadow-brand">
+                {initials}
+              </span>
+              <div className="min-w-0">
+                <h1 className="truncate text-2xl font-bold text-slate-900">{s.fullName}</h1>
+                <a
+                  href={`mailto:${s.email}`}
+                  className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-brand-700"
+                >
+                  <Icon name="mail" size={13} />
+                  <span className="truncate">{s.email}</span>
+                </a>
+              </div>
             </div>
+            {isAdmin && (
+              <div className="flex shrink-0 gap-2">
+                <Button variant="secondary" icon="external" onClick={() => setShowMove(true)}>
+                  Move Student
+                </Button>
+                <Button variant="danger" icon="trash" onClick={() => setShowDelete(true)}>
+                  Delete
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <TrackBadge track={s.currentTrack} />
+            <Badge tone="brand">{s.currentStage.replace(/_/g, " ")}</Badge>
+            <ProgramStatusBadge status={s.programStatus} />
+            {s.currentCohort && <Badge tone="info">{s.currentCohort.name}</Badge>}
+            {s.campus && <Badge>{s.campus.name}</Badge>}
+            {s.growthCoach && <Badge>Coach: {s.growthCoach.name}</Badge>}
+            {s.chosenProject && <Badge tone="neutral">{s.chosenProject}</Badge>}
+          </div>
+          {openFlags.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTab("Flags")}
+              className="mt-4 flex w-full items-center gap-2.5 rounded-lg bg-rose-50 px-3 py-2.5 text-left ring-1 ring-inset ring-rose-200 transition-colors hover:bg-rose-100"
+            >
+              <Icon name="flag" size={15} className="shrink-0 text-rose-500" />
+              <span className="flex flex-wrap items-center gap-1.5">
+                {openFlags.map((f: { id: string; severity: string; title: string }) => (
+                  <SeverityBadge key={f.id} severity={f.severity} />
+                ))}
+              </span>
+              <span className="ml-auto flex shrink-0 items-center gap-1 text-xs font-semibold text-rose-700">
+                {openFlags.length} open flag{openFlags.length > 1 ? "s" : ""}
+                <Icon name="chevronRight" size={13} />
+              </span>
+            </button>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <TrackBadge track={s.currentTrack} />
-          <Badge>{s.currentStage.replace(/_/g, " ")}</Badge>
-          <ProgramStatusBadge status={s.programStatus} />
-          {s.currentCohort && <Badge tone="info">{s.currentCohort.name}</Badge>}
-          {s.campus && <Badge>{s.campus.name}</Badge>}
-          {s.growthCoach && <Badge>Coach: {s.growthCoach.name}</Badge>}
-          {s.chosenProject && <Badge tone="neutral">{s.chosenProject}</Badge>}
-        </div>
-        {openFlags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {openFlags.map((f: { id: string; severity: string; title: string }) => (
-              <SeverityBadge key={f.id} severity={f.severity} />
-            ))}
-            <span className="text-xs text-rose-700">{openFlags.length} open flag(s) — see Flags tab</span>
-          </div>
-        )}
       </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-200">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
-              tab === t ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} active={tab} onChange={setTab} counts={{ Flags: openFlags.length }} />
 
-      <div>
+      <div className="animate-fade-in" key={tab}>
         {tab === "Overview" && <OverviewTab detail={data} />}
         {tab === "Project Review" && <ProjectReviewTab student={s} reviews={data.projectReviews} onChanged={refresh} />}
         {tab === "Video" && <VideoTab student={s} assignments={data.videoAssignments} onChanged={refresh} />}
@@ -130,7 +164,7 @@ export function StudentDetailPage() {
           onDeleted={() => navigate(isAdmin ? "/students" : "/tasks")}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -166,13 +200,19 @@ function DeleteStudentModal({
           email history. This cannot be undone.
         </p>
         <Field label={`Type "${student.fullName}" to confirm`}>
-          <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoFocus />
+          <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoFocus placeholder={student.fullName} />
         </Field>
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={() => mutation.mutate()} disabled={confirmText !== student.fullName || mutation.isPending}>
+          <Button
+            variant="danger"
+            icon="trash"
+            onClick={() => mutation.mutate()}
+            loading={mutation.isPending}
+            disabled={confirmText !== student.fullName}
+          >
             {mutation.isPending ? "Deleting…" : "Delete Permanently"}
           </Button>
         </div>

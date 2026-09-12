@@ -18,6 +18,7 @@ import { Modal } from "../../components/ui/Modal";
 import { Field, Input, Select, Textarea } from "../../components/ui/Form";
 import { ErrorBanner, EmptyState } from "../../components/ui/Feedback";
 import { Badge } from "../../components/ui/Badge";
+import { Icon } from "../../components/ui/Icon";
 import { EmailComposer } from "../../components/EmailComposer";
 import { useAuth } from "../../lib/auth";
 import { Student } from "../../types";
@@ -96,24 +97,49 @@ export function DevelopmentTab({
   return (
     <div className="space-y-6">
       {isDevTrack && (
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-slate-900">{TRACK_LABEL[track as string]}</h2>
+        <div className="surface p-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100">
+              <Icon name="sparkle" size={13} />
+            </span>
+            {TRACK_LABEL[track as string]}
+          </h2>
           <EstimatedTimeSummary studentId={student.id} track={track as "A2" | "B"} />
         </div>
       )}
 
       <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">
-            Deliverables — {verifiedCount} of {deliverables.length} completed
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            Deliverables
+            {deliverables.length > 0 && (
+              <Badge tone={verifiedCount === deliverables.length ? "success" : "neutral"} dot>
+                {verifiedCount} of {deliverables.length} completed
+              </Badge>
+            )}
           </h3>
           <div className="flex items-center gap-2">
             {isDevTrack && isAdmin && deliverables.length > 0 && (
               <SendDeliverablesEmail student={student} track={track as "A2" | "B"} selectedIds={selectedIds} />
             )}
-            {isDevTrack && isAdmin && <Button size="sm" onClick={() => setShowAdd(true)}>+ Add Deliverable</Button>}
+            {isDevTrack && isAdmin && (
+              <Button size="sm" icon="plus" onClick={() => setShowAdd(true)}>
+                Add Deliverable
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Completion bar across all assigned deliverables — the one number both
+            Admin and Growth Coach are tracking on this tab. */}
+        {deliverables.length > 0 && (
+          <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500 ease-smooth"
+              style={{ width: `${(verifiedCount / deliverables.length) * 100}%` }}
+            />
+          </div>
+        )}
         {isAdmin && deliverables.length > 0 && (
           <p className="mb-2 text-xs text-slate-400">Checked deliverables are the ones included when you send the assignment email.</p>
         )}
@@ -128,7 +154,14 @@ export function DevelopmentTab({
               onChanged={onChanged}
             />
           ))}
-          {deliverables.length === 0 && <p className="text-sm text-slate-500">No deliverables assigned yet.</p>}
+          {deliverables.length === 0 && (
+            <div className="surface flex flex-col items-center gap-2 py-10 text-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200">
+                <Icon name="clipboard" size={18} />
+              </span>
+              <p className="text-sm font-medium text-slate-600">No deliverables assigned yet.</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -193,14 +226,25 @@ function EstimatedTimeSummary({ studentId, track }: { studentId: string; track: 
   const { data } = useQuery({ queryKey: ["estimated-time", studentId, track], queryFn: () => fetchEstimatedTime(studentId, track) });
   if (!data || data.count === 0) return null;
   return (
-    <p className="mt-1 text-sm text-slate-500">
-      Estimated time to complete all {data.count} assigned deliverable{data.count === 1 ? "" : "s"}:{" "}
-      <strong className="text-slate-800">
-        {data.value} {data.unit.toLowerCase()}
-      </strong>
-      {" · "}
-      {data.verifiedCount} of {data.count} verified
-    </p>
+    <div className="mt-3 grid grid-cols-3 gap-3">
+      <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-inset ring-slate-200/70">
+        <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Assigned</p>
+        <p className="mt-0.5 text-lg font-semibold tabular text-slate-900">{data.count}</p>
+      </div>
+      <div className="rounded-lg bg-brand-50/70 px-3 py-2 ring-1 ring-inset ring-brand-100">
+        <p className="text-2xs font-semibold uppercase tracking-wider text-brand-600/80">Estimated time</p>
+        <p className="mt-0.5 text-lg font-semibold tabular text-brand-700">
+          {data.value} <span className="text-xs font-medium">{data.unit.toLowerCase()}</span>
+        </p>
+      </div>
+      <div className="rounded-lg bg-emerald-50/70 px-3 py-2 ring-1 ring-inset ring-emerald-100">
+        <p className="text-2xs font-semibold uppercase tracking-wider text-emerald-600/80">Verified</p>
+        <p className="mt-0.5 text-lg font-semibold tabular text-emerald-700">
+          {data.verifiedCount}
+          <span className="text-xs font-medium text-emerald-600/70"> / {data.count}</span>
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -286,7 +330,7 @@ function AddDeliverableModal({
         </Field>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Adding…" : "Add Deliverable"}</Button>
+          <Button type="submit" loading={mutation.isPending}>{mutation.isPending ? "Adding…" : "Add Deliverable"}</Button>
         </div>
       </form>
     </Modal>
@@ -359,14 +403,14 @@ function DeliverableRow({
       {!isVerified && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Input className="max-w-xs" placeholder="Submission link" value={submission} onChange={(e) => setSubmission(e.target.value)} />
-          <Button size="sm" variant="secondary" onClick={() => submitMutation.mutate()} disabled={!submission || submitMutation.isPending}>
+          <Button size="sm" variant="secondary" onClick={() => submitMutation.mutate()} loading={submitMutation.isPending} disabled={!submission}>
             Record Submission
           </Button>
           <Input className="max-w-xs" placeholder="Verification feedback" value={feedback} onChange={(e) => setFeedback(e.target.value)} />
-          <Button size="sm" onClick={() => verifyMutation.mutate("VERIFIED")} disabled={!feedback || verifyMutation.isPending}>
+          <Button size="sm" onClick={() => verifyMutation.mutate("VERIFIED")} loading={verifyMutation.isPending} disabled={!feedback}>
             Verify
           </Button>
-          <Button size="sm" variant="danger" onClick={() => verifyMutation.mutate("REJECTED")} disabled={!feedback || verifyMutation.isPending}>
+          <Button size="sm" variant="danger" onClick={() => verifyMutation.mutate("REJECTED")} loading={verifyMutation.isPending} disabled={!feedback}>
             Reject
           </Button>
         </div>
@@ -399,7 +443,7 @@ function DeliverableRow({
             <Button size="sm" variant="secondary" onClick={() => setMode("view")} disabled={deleteMutation.isPending}>
               Cancel
             </Button>
-            <Button size="sm" variant="danger" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+            <Button size="sm" variant="danger" onClick={() => deleteMutation.mutate()} loading={deleteMutation.isPending}>
               {deleteMutation.isPending ? "Deleting…" : "Confirm Delete"}
             </Button>
           </div>
@@ -492,7 +536,7 @@ function EditDeliverableForm({
       </Field>
       <div className="flex justify-end gap-2 pt-1">
         <Button type="button" size="sm" variant="secondary" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" size="sm" disabled={mutation.isPending}>{mutation.isPending ? "Saving…" : "Save Changes"}</Button>
+        <Button type="submit" size="sm" loading={mutation.isPending}>{mutation.isPending ? "Saving…" : "Save Changes"}</Button>
       </div>
     </form>
   );
@@ -520,7 +564,7 @@ function GrowthCoachEvaluationRow({
   });
 
   return (
-    <div className="rounded-md border border-slate-100 p-3 text-sm">
+    <div className="rounded-lg border border-slate-200/70 p-3 text-sm">
       {error && <div className="mb-2"><ErrorBanner message={error} /></div>}
       <div className="flex items-center justify-between">
         <span>{g.track} · {new Date(g.evaluatedAt).toLocaleDateString()}</span>
@@ -534,10 +578,10 @@ function GrowthCoachEvaluationRow({
           </span>
           {isAdmin ? (
             <div className="ml-auto flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => dismissMutation.mutate()} disabled={dismissMutation.isPending}>
+              <Button size="sm" variant="secondary" onClick={() => dismissMutation.mutate()} loading={dismissMutation.isPending}>
                 Dismiss
               </Button>
-              <Button size="sm" onClick={() => confirmMutation.mutate()} disabled={confirmMutation.isPending}>
+              <Button size="sm" onClick={() => confirmMutation.mutate()} loading={confirmMutation.isPending}>
                 Confirm Transition
               </Button>
             </div>
@@ -565,7 +609,7 @@ function GrowthCoachForm({ student, onChanged }: { student: Student; onChanged: 
   });
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="surface p-4">
       <h3 className="mb-2 text-sm font-semibold text-slate-900">Record Growth Coach Evaluation</h3>
       {error && <div className="mb-2"><ErrorBanner message={error} /></div>}
       <div className="flex flex-wrap items-end gap-3">
@@ -578,7 +622,7 @@ function GrowthCoachForm({ student, onChanged }: { student: Student; onChanged: 
         <Field label="Feedback" hint="Required, evidence-based">
           <Textarea rows={2} className="min-w-[20rem]" value={feedback} onChange={(e) => setFeedback(e.target.value)} />
         </Field>
-        <Button onClick={() => mutation.mutate()} disabled={feedback.trim().length < 10 || mutation.isPending}>
+        <Button onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={feedback.trim().length < 10}>
           Record Decision
         </Button>
       </div>

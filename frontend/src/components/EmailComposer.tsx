@@ -11,6 +11,7 @@ import { apiErrorMessage } from "../lib/api";
 import { Button } from "./ui/Button";
 import { Field, Input, Select } from "./ui/Form";
 import { ErrorBanner } from "./ui/Feedback";
+import { Icon } from "./ui/Icon";
 
 interface EmailTemplate {
   id: string;
@@ -43,7 +44,7 @@ export function EmailComposer({
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+      <Button variant="secondary" size="sm" icon="mail" onClick={() => setOpen(true)}>
         {triggerLabel}
       </Button>
     );
@@ -117,7 +118,13 @@ function ComposeForm({
   });
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="surface animate-fade-in w-full p-4 ring-1 ring-brand-100">
+      <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100">
+          <Icon name="mail" size={13} />
+        </span>
+        Compose email
+      </p>
       {error && <div className="mb-2"><ErrorBanner message={error} /></div>}
       {!lockTemplate && (
         <Field label="Template">
@@ -146,26 +153,29 @@ function ComposeForm({
               <Input value={variables[name] ?? ""} onChange={(e) => setVariables((prev) => ({ ...prev, [name]: e.target.value }))} />
             </Field>
           ))}
-          <Button variant="secondary" onClick={() => previewMutation.mutate()} disabled={previewMutation.isPending}>
+          <Button variant="secondary" onClick={() => previewMutation.mutate()} loading={previewMutation.isPending}>
             Preview
           </Button>
         </div>
       )}
 
       {body !== null && (
-        <div className="mt-4 space-y-2">
-          <p className="text-xs font-semibold text-slate-500">To: {student.email}</p>
-          <Field label="Subject">
+        <div className="mt-4 space-y-3">
+          <p className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600 ring-1 ring-inset ring-slate-200/70">
+            <span className="font-semibold text-slate-500">To:</span>
+            <span className="truncate font-medium text-slate-800">{student.email}</span>
+          </p>
+          <Field label="Subject" required>
             <Input value={subject ?? ""} onChange={(e) => setSubject(e.target.value)} />
           </Field>
           <Field label="Body" hint="Edit freely before sending — this is exactly what gets sent.">
             <Textarea8 value={body} onChange={(e) => setBody(e.target.value)} />
           </Field>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
             <Button variant="secondary" onClick={onCancel}>
               Cancel
             </Button>
-            <Button onClick={() => sendMutation.mutate()} disabled={sendMutation.isPending}>
+            <Button icon="mail" onClick={() => sendMutation.mutate()} loading={sendMutation.isPending}>
               {sendMutation.isPending ? "Sending…" : "Confirm & Send"}
             </Button>
           </div>
@@ -191,7 +201,7 @@ function Textarea8({ value, onChange }: { value: string; onChange: (e: React.Cha
       rows={8}
       value={value}
       onChange={onChange}
-      className="block w-full rounded-md border-0 px-3 py-1.5 font-mono text-xs text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-600"
+      className="block w-full resize-y rounded-md border-0 bg-white px-3 py-2 font-mono text-xs leading-relaxed text-slate-900 shadow-xs ring-1 ring-inset ring-slate-300 transition-shadow hover:ring-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500"
     />
   );
 }

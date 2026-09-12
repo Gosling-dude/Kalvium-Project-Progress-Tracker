@@ -3,9 +3,10 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { apiErrorMessage } from "../../lib/api";
 import { Modal } from "../../components/ui/Modal";
-import { Field, Input, Select, Textarea } from "../../components/ui/Form";
+import { Field, Input, Select, Textarea, Checkbox } from "../../components/ui/Form";
 import { Button } from "../../components/ui/Button";
 import { ErrorBanner } from "../../components/ui/Feedback";
+import { Badge, ProgramStatusBadge, TrackBadge } from "../../components/ui/Badge";
 import { Student } from "../../types";
 
 const TRACK_STAGE_DEFAULT: Record<string, string> = {
@@ -54,8 +55,13 @@ export function MoveTrackModal({ student, onClose, onDone }: { student: Student;
         }}
       >
         {error && <ErrorBanner message={error} />}
-        <div className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
-          Current: Track {student.currentTrack ?? "—"} / {student.currentStage.replace(/_/g, " ")} / {student.programStatus}
+        <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-inset ring-slate-200/70">
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Currently</p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5">
+            <TrackBadge track={student.currentTrack} />
+            <Badge tone="brand">{student.currentStage.replace(/_/g, " ")}</Badge>
+            <ProgramStatusBadge status={student.programStatus} />
+          </p>
         </div>
         <Field label="New track">
           <Select
@@ -83,23 +89,32 @@ export function MoveTrackModal({ student, onClose, onDone }: { student: Student;
             <option value="INACTIVE">Inactive</option>
           </Select>
         </Field>
-        <Field label="Reason" hint="Specific and evidence-based — this becomes part of the permanent record.">
+        <Field label="Reason" required hint="Specific and evidence-based — this becomes part of the permanent record.">
           <Textarea required rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
         </Field>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={useOverride} onChange={(e) => setUseOverride(e.target.checked)} />
-          This is an exceptional move (not part of the normal program flow)
-        </label>
-        {useOverride && (
-          <Field label="Override reason" hint="Required for exceptional moves such as Track A → Track B.">
-            <Textarea required rows={2} value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} />
-          </Field>
-        )}
-        <div className="flex justify-end gap-2 pt-2">
+        <div
+          className={`rounded-lg p-3 ring-1 ring-inset transition-colors ${
+            useOverride ? "bg-amber-50 ring-amber-200" : "bg-slate-50/70 ring-slate-200/70"
+          }`}
+        >
+          <Checkbox
+            checked={useOverride}
+            onChange={(e) => setUseOverride(e.target.checked)}
+            label="This is an exceptional move (not part of the normal program flow)"
+          />
+          {useOverride && (
+            <div className="mt-3 animate-fade-in">
+              <Field label="Override reason" required hint="Required for exceptional moves such as Track A → Track B.">
+                <Textarea required rows={2} value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} />
+              </Field>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" loading={mutation.isPending}>
             {mutation.isPending ? "Moving…" : "Confirm Move"}
           </Button>
         </div>

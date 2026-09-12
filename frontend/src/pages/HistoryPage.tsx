@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAudit } from "../lib/queries";
-import { Spinner } from "../components/ui/Feedback";
-import { Field, Input } from "../components/ui/Form";
+import { TableSkeleton, EmptyState } from "../components/ui/Feedback";
+import { InputWithIcon } from "../components/ui/Form";
+import { Pager } from "../components/ui/Table";
+import { PageContainer, PageHeader } from "../components/ui/Page";
+import { Icon, IconName } from "../components/ui/Icon";
 
 interface AuditEvent {
   id: string;
@@ -13,60 +16,101 @@ interface AuditEvent {
   actor?: { name: string; role: string } | null;
 }
 
+// Derived from the action verb rather than an exhaustive map, so new audit
+// actions get a sensible icon and colour without needing a code change here.
+function describeAction(action: string): { icon: IconName; ring: string; text: string } {
+  if (/DELET|REMOV/.test(action)) return { icon: "trash", ring: "bg-rose-50 text-rose-600 ring-rose-100", text: "text-rose-700" };
+  if (/CREAT|ASSIGN|ADD|ENROL/.test(action)) return { icon: "plus", ring: "bg-emerald-50 text-emerald-600 ring-emerald-100", text: "text-emerald-700" };
+  if (/VERIF|CONFIRM|COMPLET|GRADUAT/.test(action)) return { icon: "checkCircle", ring: "bg-emerald-50 text-emerald-600 ring-emerald-100", text: "text-emerald-700" };
+  if (/FLAG/.test(action)) return { icon: "flag", ring: "bg-amber-50 text-amber-600 ring-amber-100", text: "text-amber-700" };
+  if (/EMAIL|SENT/.test(action)) return { icon: "mail", ring: "bg-blue-50 text-blue-600 ring-blue-100", text: "text-blue-700" };
+  if (/TRANSITION|MOVE|TRACK/.test(action)) return { icon: "trendUp", ring: "bg-brand-50 text-brand-600 ring-brand-100", text: "text-brand-700" };
+  if (/UPDAT|EDIT|CHANG/.test(action)) return { icon: "edit", ring: "bg-slate-100 text-slate-500 ring-slate-200", text: "text-slate-700" };
+  return { icon: "info", ring: "bg-slate-100 text-slate-500 ring-slate-200", text: "text-slate-700" };
+}
+
 export function HistoryPage() {
   const [entityType, setEntityType] = useState("");
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useQuery({ queryKey: ["audit", entityType, page], queryFn: () => fetchAudit({ entityType: entityType || undefined, page }) });
+  const { data, isLoading } = useQuery({
+    queryKey: ["audit", entityType, page],
+    queryFn: () => fetchAudit({ entityType: entityType || undefined, page }),
+  });
+
+  const events = data?.data as AuditEvent[] | undefined;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">History / Audit Trail</h1>
-        <p className="text-sm text-slate-500">Every significant action across the program, append-only.</p>
-      </div>
-      <Field label="Filter by entity type" hint="e.g. Student, ProjectReview, Interview, Flag">
-        <Input className="max-w-xs" value={entityType} onChange={(e) => { setEntityType(e.target.value); setPage(1); }} />
-      </Field>
+    <PageContainer width="max-w-5xl">
+      <PageHeader
+        icon="history"
+        title="History / Audit Trail"
+        description="Every significant action across the program, append-only."
+      />
 
-      <div className="rounded-lg border border-slate-200 bg-white">
-        {isLoading ? (
-          <Spinner />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-sm">
-              <tbody className="divide-y divide-slate-100">
-                {(data?.data as AuditEvent[] | undefined)?.map((e) => (
-                  <tr key={e.id}>
-                    <td className="max-w-[220px] truncate px-4 py-2.5 font-medium text-slate-800" title={e.action.replace(/_/g, " ")}>
-                      {e.action.replace(/_/g, " ")}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{e.entityType} · {e.entityId.slice(0, 8)}</td>
-                    <td className="max-w-[140px] truncate px-4 py-2.5 text-slate-500" title={e.actor?.name ?? "system"}>{e.actor?.name ?? "system"}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-right text-slate-400">{new Date(e.createdAt).toLocaleString()}</td>
-                  </tr>
-                ))}
-                {data?.data.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
-                      No events found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {data?.pagination && data.pagination.totalPages > 1 && (
-          <div className="flex justify-end gap-2 border-t border-slate-100 px-3 py-2 text-sm">
-            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="disabled:opacity-40">
-              Previous
-            </button>
-            <button disabled={page >= data.pagination.totalPages} onClick={() => setPage((p) => p + 1)} className="disabled:opacity-40">
-              Next
-            </button>
-          </div>
+      <div className="surface flex flex-wrap items-center gap-2 p-3">
+        <InputWithIcon
+          icon="search"
+          placeholder="Filter by entity type…"
+          wrapperClassName="w-full sm:w-80"
+          value={entityType}
+          onChange={(e) => {
+            setEntityType(e.target.value);
+            setPage(1);
+          }}
+        />
+        <span className="text-xs text-slate-500">e.g. Student, ProjectReview, Interview, Flag</span>
+        {data?.pagination && (
+          <span className="ml-auto pr-1 text-xs font-medium tabular text-slate-500">{data.pagination.total} events</span>
         )}
       </div>
-    </div>
+
+      <div className="surface">
+        {isLoading ? (
+          <TableSkeleton rows={8} cols={3} />
+        ) : events && events.length > 0 ? (
+          <>
+            <ol className="divide-y divide-slate-100">
+              {events.map((e) => {
+                const a = describeAction(e.action);
+                return (
+                  <li key={e.id} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-slate-50/70">
+                    <span
+                      className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ring-inset ${a.ring}`}
+                    >
+                      <Icon name={a.icon} size={14} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className={`truncate text-sm font-medium ${a.text}`} title={e.action.replace(/_/g, " ")}>
+                        {e.action.replace(/_/g, " ")}
+                      </p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+                        <span className="font-medium text-slate-600">{e.entityType}</span>
+                        <span className="rounded bg-slate-100 px-1 py-px font-mono text-2xs text-slate-500">
+                          {e.entityId.slice(0, 8)}
+                        </span>
+                        <span className="text-slate-300">·</span>
+                        <span>{e.actor?.name ?? "system"}</span>
+                      </p>
+                    </div>
+                    <time className="shrink-0 whitespace-nowrap text-xs text-slate-400" dateTime={e.createdAt}>
+                      {new Date(e.createdAt).toLocaleString()}
+                    </time>
+                  </li>
+                );
+              })}
+            </ol>
+            {data?.pagination && (
+              <Pager page={page} totalPages={data.pagination.totalPages} onChange={setPage} />
+            )}
+          </>
+        ) : (
+          <EmptyState
+            icon="history"
+            title="No events found"
+            description={entityType ? `Nothing recorded for "${entityType}". Try a different entity type.` : undefined}
+          />
+        )}
+      </div>
+    </PageContainer>
   );
 }

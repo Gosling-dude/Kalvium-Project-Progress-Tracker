@@ -3,9 +3,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { assignVideoQuestionSet, fetchVideoAssignmentProgress, finalizeVideoAssessment, recordVideoEvaluation, recordVideoSubmission } from "../../lib/queries";
 import { apiErrorMessage } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
-import { Input, Textarea } from "../../components/ui/Form";
-import { ErrorBanner } from "../../components/ui/Feedback";
+import { Field, Input, Select, Textarea } from "../../components/ui/Form";
+import { ErrorBanner, EmptyState } from "../../components/ui/Feedback";
 import { Badge } from "../../components/ui/Badge";
+import { Icon } from "../../components/ui/Icon";
 import { EmailComposer } from "../../components/EmailComposer";
 import { Student } from "../../types";
 
@@ -37,8 +38,12 @@ export function VideoTab({ student, assignments, onChanged }: { student: Student
 
   if (student.currentTrack !== "A" && !latest) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
-        Video Questions are only assigned to Track A students. This student is currently Track {student.currentTrack ?? "unrouted"}.
+      <div className="surface">
+        <EmptyState
+          icon="video"
+          title="Video Questions don't apply here"
+          description={`Video Questions are only assigned to Track A students. This student is currently Track ${student.currentTrack ?? "unrouted"}.`}
+        />
       </div>
     );
   }
@@ -48,9 +53,12 @@ export function VideoTab({ student, assignments, onChanged }: { student: Student
       {error && <ErrorBanner message={error} />}
       {!latest || latest.finalizedAt ? (
         student.currentTrack === "A" && (
-          <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
-            <p className="mb-3 text-sm text-slate-600">{latest ? "Assign a new video question set." : "No video questions assigned yet."}</p>
-            <Button onClick={() => assignMutation.mutate()} disabled={assignMutation.isPending}>
+          <div className="surface flex flex-col items-center gap-3 px-6 py-10 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-violet-50 to-violet-100 text-violet-600 ring-1 ring-inset ring-violet-200/70">
+              <Icon name="video" size={22} />
+            </span>
+            <p className="text-sm text-slate-600">{latest ? "Assign a new video question set." : "No video questions assigned yet."}</p>
+            <Button icon="plus" onClick={() => assignMutation.mutate()} loading={assignMutation.isPending}>
               Assign 10 Video Questions
             </Button>
           </div>
@@ -65,19 +73,22 @@ export function VideoTab({ student, assignments, onChanged }: { student: Student
           {assignments
             .filter((a) => a.finalizedAt)
             .map((a) => (
-              <div key={a.id} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>
-                    {a.totalScore}/50 · {new Date(a.finalizedAt!).toLocaleDateString()}
+              <div key={a.id} className="surface p-3.5 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <span className="text-base font-semibold tabular text-slate-900">{a.totalScore}/50</span>
+                    <span className="text-xs text-slate-400">{new Date(a.finalizedAt!).toLocaleDateString()}</span>
                   </span>
-                  <Badge tone={a.outcome === "A1" ? "success" : "warning"}>{a.outcome}</Badge>
+                  <Badge tone={a.outcome === "A1" ? "success" : "warning"} dot>
+                    {a.outcome}
+                  </Badge>
                 </div>
                 <p className="mt-1 text-slate-600">{a.outcomeReason}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {[...a.evaluations]
                     .sort((x, y) => x.question.questionNumber - y.question.questionNumber)
                     .map((e) => (
-                      <div key={e.id} className="rounded-md bg-slate-50 p-2">
+                      <div key={e.id} className="rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-medium text-slate-700">
                             {e.question.questionNumber}. {e.question.title}
@@ -132,12 +143,31 @@ function VideoAssignmentPanel({ assignmentId, student, onChanged }: { assignment
     .join("<br/>");
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">Video Assessment</h3>
-        <span className="text-sm text-slate-500">
-          {data.submittedCount}/{data.totalQuestions} submitted · {data.evaluatedCount}/{data.totalQuestions} reviewed · {data.totalScoreSoFar}/50 so far
+    <div className="surface p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-100">
+            <Icon name="video" size={13} />
+          </span>
+          Video Assessment
+        </h3>
+        <span className="flex flex-wrap items-center gap-1.5">
+          <Badge tone="neutral">
+            {data.submittedCount}/{data.totalQuestions} submitted
+          </Badge>
+          <Badge tone={data.evaluatedCount === data.totalQuestions ? "success" : "info"}>
+            {data.evaluatedCount}/{data.totalQuestions} reviewed
+          </Badge>
+          <Badge tone="brand">{data.totalScoreSoFar}/50 so far</Badge>
         </span>
+      </div>
+
+      {/* Review progress across the 10 questions. */}
+      <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-500 transition-all duration-500 ease-smooth"
+          style={{ width: `${(data.evaluatedCount / data.totalQuestions) * 100}%` }}
+        />
       </div>
       <div className="mb-3">
         <EmailComposer
@@ -159,12 +189,23 @@ function VideoAssignmentPanel({ assignmentId, student, onChanged }: { assignment
       </div>
 
       {data.evaluatedCount === data.totalQuestions && (
-        <div className="mt-4 border-t border-slate-100 pt-4">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Finalization reason (required)</label>
-          <Textarea rows={2} value={outcomeReason} onChange={(e) => setOutcomeReason(e.target.value)} placeholder="e.g. Total 40/50, all mandatory questions passed." />
-          <div className="mt-2 flex justify-end">
-            <Button onClick={() => finalizeMutation.mutate()} disabled={finalizeMutation.isPending || outcomeReason.trim().length < 10}>
-              Finalize & Route (A1/A2)
+        <div className="mt-4 animate-fade-in border-t border-slate-100 pt-4">
+          <Field label="Finalization reason" required>
+            <Textarea
+              rows={2}
+              value={outcomeReason}
+              onChange={(e) => setOutcomeReason(e.target.value)}
+              placeholder="e.g. Total 40/50, all mandatory questions passed."
+            />
+          </Field>
+          <div className="mt-3 flex justify-end">
+            <Button
+              icon="check"
+              onClick={() => finalizeMutation.mutate()}
+              loading={finalizeMutation.isPending}
+              disabled={outcomeReason.trim().length < 10}
+            >
+              Finalize &amp; Route (A1/A2)
             </Button>
           </div>
         </div>
@@ -198,28 +239,38 @@ function QuestionRow({
   });
 
   return (
-    <div className="rounded-md border border-slate-100 p-3">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-800">
-          {evalRow.question.questionKey} — {evalRow.question.title} {isMandatory && <Badge tone="info">Mandatory</Badge>}
+    <div
+      className={`rounded-lg border p-3 transition-colors ${
+        evalRow.evaluated ? "border-emerald-200/70 bg-emerald-50/30" : "border-slate-200/70 hover:border-slate-300"
+      }`}
+    >
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+        <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-800">
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-2xs text-slate-600">{evalRow.question.questionKey}</span>
+          {evalRow.question.title}
+          {isMandatory && <Badge tone="info">Mandatory</Badge>}
         </span>
-        {evalRow.evaluated && <Badge tone="success">Reviewed: {evalRow.score}/5</Badge>}
+        {evalRow.evaluated && (
+          <Badge tone="success" dot>
+            Reviewed: {evalRow.score}/5
+          </Badge>
+        )}
       </div>
-      <p className="mb-2 text-xs text-slate-500">{evalRow.question.questionText}</p>
+      <p className="mb-2.5 text-xs leading-relaxed text-slate-500">{evalRow.question.questionText}</p>
       <div className="flex flex-wrap items-center gap-2">
         <Input className="max-w-xs" placeholder="Submission link/reference" value={reference} onChange={(e) => setReference(e.target.value)} />
-        <Button size="sm" variant="secondary" onClick={() => submitMutation.mutate()} disabled={!reference || submitMutation.isPending}>
+        <Button size="sm" variant="secondary" onClick={() => submitMutation.mutate()} loading={submitMutation.isPending} disabled={!reference}>
           Mark Submitted
         </Button>
-        <select className="rounded border-slate-300 text-sm" value={score} onChange={(e) => setScore(Number(e.target.value))}>
+        <Select className="w-16" value={score} onChange={(e) => setScore(Number(e.target.value))}>
           {[0, 1, 2, 3, 4, 5].map((n) => (
             <option key={n} value={n}>
               {n}
             </option>
           ))}
-        </select>
+        </Select>
         <Input className="max-w-xs" placeholder="Evaluation notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <Button size="sm" onClick={() => evalMutation.mutate()} disabled={!notes || evalMutation.isPending}>
+        <Button size="sm" onClick={() => evalMutation.mutate()} loading={evalMutation.isPending} disabled={!notes}>
           {evalRow.evaluated ? "Update Score" : "Save Score"}
         </Button>
       </div>

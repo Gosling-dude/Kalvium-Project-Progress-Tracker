@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { Field, Input, Select, Textarea } from "../../components/ui/Form";
 import { ErrorBanner, EmptyState } from "../../components/ui/Feedback";
 import { SeverityBadge, Badge } from "../../components/ui/Badge";
+import { Icon } from "../../components/ui/Icon";
 import { Student, Flag, User } from "../../types";
 
 const CATEGORIES = [
@@ -31,15 +32,29 @@ export function FlagsTab({ student, flags, onChanged }: { student: Student; flag
     <div className="space-y-4">
       {isAdmin && (
         <div className="flex justify-end">
-          <Button variant="danger" onClick={() => setShowForm((v) => !v)}>
+          <Button
+            variant={showForm ? "secondary" : "danger"}
+            icon={showForm ? "close" : "flag"}
+            onClick={() => setShowForm((v) => !v)}
+          >
             {showForm ? "Cancel" : "Raise Flag"}
           </Button>
         </div>
       )}
-      {showForm && <CreateFlagForm studentId={student.id} onDone={() => { setShowForm(false); onChanged(); }} />}
+      {showForm && (
+        <div className="animate-fade-in">
+          <CreateFlagForm studentId={student.id} onDone={() => { setShowForm(false); onChanged(); }} />
+        </div>
+      )}
 
       {flags.length === 0 && !showForm ? (
-        <EmptyState title="No flags" description="Concerns raised about this student will appear here." />
+        <div className="surface">
+          <EmptyState
+            icon="checkCircle"
+            title="No flags"
+            description="Concerns raised about this student will appear here."
+          />
+        </div>
       ) : (
         <div className="space-y-2">
           {flags.map((f) => (
@@ -105,7 +120,7 @@ function CreateFlagForm({ studentId, onDone }: { studentId: string; onDone: () =
         <Field label="Description" hint="Explain the concern with specifics">
           <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
-        <Button variant="danger" onClick={() => mutation.mutate()} disabled={!title || description.length < 10 || mutation.isPending}>
+        <Button variant="danger" onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!title || description.length < 10}>
           Raise Flag
         </Button>
       </div>
@@ -118,30 +133,39 @@ function FlagRow({ flag, isAdmin, onChanged }: { flag: Flag; isAdmin: boolean; o
   const mutation = useMutation({ mutationFn: () => resolveFlag(flag.id, note), onSuccess: onChanged });
 
   return (
-    <div className="rounded-md border border-slate-100 p-3 text-sm">
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-slate-800">{flag.title}</span>
-        <div className="flex items-center gap-2">
+    <div
+      className={`surface p-3.5 text-sm ${
+        flag.status === "OPEN" ? "border-l-[3px] border-l-rose-400" : "border-l-[3px] border-l-emerald-400"
+      }`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <span className="min-w-0 font-medium text-slate-900">{flag.title}</span>
+        <div className="flex shrink-0 items-center gap-2">
           <SeverityBadge severity={flag.severity} />
-          <Badge tone={flag.status === "OPEN" ? "danger" : "success"}>{flag.status}</Badge>
+          <Badge tone={flag.status === "OPEN" ? "danger" : "success"} dot>
+            {flag.status}
+          </Badge>
         </div>
       </div>
-      <p className="mt-1 text-slate-600">{flag.description}</p>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1.5 leading-relaxed text-slate-600">{flag.description}</p>
+      <p className="mt-2 text-xs text-slate-400">
         {flag.category.replace(/_/g, " ")} · raised by {flag.createdBy?.name} on {new Date(flag.createdAt).toLocaleDateString()}
         {flag.assignedTo && ` · assigned to ${flag.assignedTo.name}`}
       </p>
       {flag.status === "OPEN" ? (
         isAdmin && (
-          <div className="mt-2 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
             <Input className="max-w-xs" placeholder="Resolution note" value={note} onChange={(e) => setNote(e.target.value)} />
-            <Button size="sm" variant="secondary" onClick={() => mutation.mutate()} disabled={!note || mutation.isPending}>
+            <Button size="sm" variant="secondary" icon="check" onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!note}>
               Resolve
             </Button>
           </div>
         )
       ) : (
-        <p className="mt-1 text-xs text-emerald-700">Resolved: {flag.resolutionNote}</p>
+        <p className="mt-2 flex items-start gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-800 ring-1 ring-inset ring-emerald-100">
+          <Icon name="checkCircle" size={13} className="mt-px shrink-0 text-emerald-500" />
+          <span>Resolved: {flag.resolutionNote}</span>
+        </p>
       )}
     </div>
   );

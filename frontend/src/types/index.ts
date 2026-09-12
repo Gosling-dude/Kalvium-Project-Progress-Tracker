@@ -95,6 +95,19 @@ export interface CohortDashboard {
   totalActiveStudents: number;
 }
 
+// Same shape of question as CohortDashboard, but for the whole program: all
+// cohorts, every student ever on the Project Defence track, no date window.
+// Track A rolls up its sub-tracks and graduated students are excluded from the
+// track counts, exactly as in CohortDashboard.
+export interface ProgramTrackSummary {
+  graduatedCount: number;
+  trackACount: number;
+  trackABreakdown: { unassignedSubTrack: number; a1: number; a2: number };
+  trackBCount: number;
+  notOnTrackCount: number;
+  totalStudents: number;
+}
+
 export interface Pagination {
   page: number;
   pageSize: number;

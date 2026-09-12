@@ -2,6 +2,7 @@ import { useState } from "react";
 import { EmailComposer } from "../../components/EmailComposer";
 import { EmptyState } from "../../components/ui/Feedback";
 import { Badge } from "../../components/ui/Badge";
+import { Icon } from "../../components/ui/Icon";
 import { Student } from "../../types";
 
 interface EmailHistoryRow {
@@ -21,15 +22,30 @@ export function EmailsTab({ student, emailHistory }: { student: Student; emailHi
       </div>
 
       {emailHistory.length === 0 ? (
-        <EmptyState title="No emails sent yet" />
+        <div className="surface">
+          <EmptyState
+            icon="mail"
+            title="No emails sent yet"
+            description="Workflow emails sent to this student will be listed here with their delivery status."
+          />
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="surface divide-y divide-slate-100">
           {emailHistory.map((r) => (
-            <div key={r.id} className="flex items-center justify-between rounded-md border border-slate-100 p-3 text-sm">
-              <span>{r.emailEvent.template?.name ?? r.emailEvent.templateKeySnapshot}</span>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <Badge tone={r.status === "SENT" ? "success" : r.status === "FAILED" ? "danger" : "neutral"}>{r.status}</Badge>
-                {r.sentAt && new Date(r.sentAt).toLocaleString()}
+            <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-slate-50/60">
+              <span className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100">
+                  <Icon name="mail" size={13} />
+                </span>
+                <span className="truncate font-medium text-slate-900">
+                  {r.emailEvent.template?.name ?? r.emailEvent.templateKeySnapshot}
+                </span>
+              </span>
+              <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
+                <Badge tone={r.status === "SENT" ? "success" : r.status === "FAILED" ? "danger" : "neutral"} dot>
+                  {r.status}
+                </Badge>
+                {r.sentAt && <time dateTime={r.sentAt}>{new Date(r.sentAt).toLocaleString()}</time>}
               </div>
             </div>
           ))}

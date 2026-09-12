@@ -5,10 +5,12 @@ import { createCohort, fetchCohorts } from "../lib/queries";
 import { Cohort } from "../types";
 import { Button } from "../components/ui/Button";
 import { Table } from "../components/ui/Table";
-import { Spinner, ErrorBanner } from "../components/ui/Feedback";
+import { TableSkeleton, ErrorBanner } from "../components/ui/Feedback";
 import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { Field, Input, Textarea } from "../components/ui/Form";
+import { PageContainer, PageHeader } from "../components/ui/Page";
+import { Icon } from "../components/ui/Icon";
 import { apiErrorMessage } from "../lib/api";
 
 export function CohortsPage() {
@@ -17,19 +19,37 @@ export function CohortsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const { data: cohorts, isLoading } = useQuery<Cohort[]>({ queryKey: ["cohorts"], queryFn: () => fetchCohorts() });
 
-  return (
-    <div className="mx-auto max-w-6xl space-y-4 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Cohorts</h1>
-          <p className="text-sm text-slate-500">Program cycles. Students belong to a cohort with full historical enrollment.</p>
-        </div>
-        <Button onClick={() => setShowCreate(true)}>New Cohort</Button>
-      </div>
+  const activeCount = cohorts?.filter((c) => c.status === "ACTIVE").length ?? 0;
+  const totalStudents = cohorts?.reduce((sum, c) => sum + (c.activeStudentCount ?? 0), 0) ?? 0;
 
-      <div className="rounded-lg border border-slate-200 bg-white">
+  return (
+    <PageContainer>
+      <PageHeader
+        icon="cohorts"
+        title="Cohorts"
+        description="Program cycles. Students belong to a cohort with full historical enrollment."
+        meta={
+          cohorts &&
+          cohorts.length > 0 && (
+            <>
+              <Badge tone="success" dot>
+                {activeCount} active
+              </Badge>
+              <Badge tone="neutral">{cohorts.length} total</Badge>
+              <Badge tone="info">{totalStudents} enrolled students</Badge>
+            </>
+          )
+        }
+        actions={
+          <Button icon="plus" onClick={() => setShowCreate(true)}>
+            New Cohort
+          </Button>
+        }
+      />
+
+      <div className="surface">
         {isLoading ? (
-          <Spinner />
+          <TableSkeleton rows={5} cols={4} />
         ) : (
           <Table
             rows={cohorts ?? []}
@@ -37,10 +57,40 @@ export function CohortsPage() {
             onRowClick={(c) => navigate(`/cohorts/${c.id}`)}
             emptyMessage="No cohorts yet. Create the first one to start enrolling students."
             columns={[
-              { header: "Name", render: (c) => <span className="font-medium text-slate-900">{c.name}</span> },
-              { header: "Code", render: (c) => c.code },
-              { header: "Active students", render: (c) => c.activeStudentCount ?? 0 },
-              { header: "Status", render: (c) => <Badge tone={c.status === "ACTIVE" ? "success" : "neutral"}>{c.status}</Badge> },
+              {
+                header: "Name",
+                render: (c) => (
+                  <span className="flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100">
+                      <Icon name="layers" size={14} />
+                    </span>
+                    <span className="font-medium text-slate-900">{c.name}</span>
+                  </span>
+                ),
+              },
+              {
+                header: "Code",
+                render: (c) => (
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">{c.code}</span>
+                ),
+              },
+              {
+                header: "Active students",
+                render: (c) => <span className="font-medium tabular text-slate-900">{c.activeStudentCount ?? 0}</span>,
+              },
+              {
+                header: "Status",
+                render: (c) => (
+                  <Badge tone={c.status === "ACTIVE" ? "success" : "neutral"} dot>
+                    {c.status}
+                  </Badge>
+                ),
+              },
+              {
+                header: "",
+                className: "w-10 text-right text-slate-300",
+                render: () => <Icon name="chevronRight" size={15} />,
+              },
             ]}
           />
         )}
@@ -55,7 +105,7 @@ export function CohortsPage() {
           }}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -82,20 +132,20 @@ function CreateCohortModal({ onClose, onCreated }: { onClose: () => void; onCrea
         }}
       >
         {error && <ErrorBanner message={error} />}
-        <Field label="Name">
+        <Field label="Name" required>
           <Input required value={name} onChange={(e) => setName(e.target.value)} placeholder="SPE 2024 Batch 3" />
         </Field>
-        <Field label="Code">
+        <Field label="Code" required hint="A short unique identifier used across reports.">
           <Input required value={code} onChange={(e) => setCode(e.target.value)} placeholder="SPE-2024-B3" />
         </Field>
         <Field label="Description" hint="Optional">
           <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" loading={mutation.isPending}>
             {mutation.isPending ? "Creating…" : "Create Cohort"}
           </Button>
         </div>

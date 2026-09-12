@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { fetchCohort, fetchStudents } from "../lib/queries";
 import { Table } from "../components/ui/Table";
 import { Badge, ProgramStatusBadge } from "../components/ui/Badge";
-import { Spinner } from "../components/ui/Feedback";
+import { TableSkeleton } from "../components/ui/Feedback";
+import { BackLink, PageContainer, PageHeader } from "../components/ui/Page";
 import { Student } from "../types";
 
 // Track B has no sub-tracks (spec section 1/7) — one flat list, each row
@@ -22,18 +23,18 @@ export function CohortTrackBPage() {
   const trackBStudents = (data?.data ?? []).filter((s) => s.currentTrack === "B");
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-6">
-      <Link to={`/cohorts/${id}`} className="text-sm text-brand-600 hover:underline">
-        ← {cohort?.name ?? "Cohort"}
-      </Link>
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Track B</h1>
-        <p className="text-sm text-slate-500">Feedback + development plan → deliverables → Growth Coach evaluation.</p>
-      </div>
+    <PageContainer>
+      <BackLink to={`/cohorts/${id}`} label={cohort?.name ?? "Cohort"} />
+      <PageHeader
+        icon="sparkle"
+        title="Track B"
+        description="Feedback + development plan → deliverables → Growth Coach evaluation."
+        meta={<Badge tone="danger">{trackBStudents.length} students on Track B</Badge>}
+      />
 
-      <div className="rounded-lg border border-slate-200 bg-white">
+      <div className="surface">
         {isLoading ? (
-          <Spinner />
+          <TableSkeleton rows={8} cols={7} />
         ) : (
           <Table
             rows={trackBStudents}
@@ -60,18 +61,22 @@ export function CohortTrackBPage() {
                 className: "max-w-[130px] truncate",
                 render: (s) => <span title={s.campus?.name ?? ""}>{s.campus?.name ?? "—"}</span>,
               },
-              { header: "Batch", render: (s) => s.batch ?? "—" },
+              { header: "Batch", render: (s) => s.batch ?? <span className="text-slate-300">—</span> },
               {
                 header: "Growth Coach Email",
                 className: "max-w-[200px] truncate",
-                render: (s) => <span title={s.growthCoach?.email ?? ""}>{s.growthCoach?.email ?? "—"}</span>,
+                render: (s) => <span title={s.growthCoach?.email ?? ""}>{s.growthCoach?.email ?? <span className="text-slate-300">—</span>}</span>,
               },
               { header: "Status", render: (s) => <ProgramStatusBadge status={s.programStatus} /> },
-              { header: "Flags", render: (s) => (s.openFlagCount ? <Badge tone="danger">{s.openFlagCount} open</Badge> : "—") },
+              {
+                header: "Flags",
+                render: (s) =>
+                  s.openFlagCount ? <Badge tone="danger">{s.openFlagCount} open</Badge> : <span className="text-slate-300">—</span>,
+              },
             ]}
           />
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

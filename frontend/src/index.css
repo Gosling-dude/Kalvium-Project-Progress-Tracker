@@ -2,14 +2,131 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  height: 100%;
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-slate-50 font-sans text-slate-900 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Numbers in tables, stats and counts should never jitter as they update. */
+  th,
+  td,
+  time,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* One consistent focus treatment across every interactive element, visible
+     only for keyboard users so pointer clicks stay clean. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500/70 ring-offset-2 ring-offset-white;
+  }
+
+  ::selection {
+    @apply bg-brand-500/20 text-brand-950;
+  }
+
+  /* Slim, unobtrusive scrollbars — the default Windows bars are the loudest
+     thing on an otherwise quiet surface. */
+  @supports selector(::-webkit-scrollbar) {
+    *::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    *::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    *::-webkit-scrollbar-thumb {
+      @apply rounded-full border-[3px] border-solid border-transparent bg-slate-300/80 bg-clip-padding;
+    }
+    *::-webkit-scrollbar-thumb:hover {
+      @apply bg-slate-400;
+    }
+    *::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+
+  /* Respect the OS "reduce motion" setting — every animation in the app is
+     decorative, so none of it should fight an accessibility preference. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+@layer components {
+  /* Shared surface treatment so every panel in the app reads as the same
+     material instead of each page inventing its own border/shadow mix. */
+  .surface {
+    @apply rounded-xl border border-slate-200/80 bg-white shadow-xs;
+  }
+
+  /* The subtle top-lit gradient used on headers and the login panel. */
+  .surface-header {
+    @apply bg-gradient-to-b from-white to-slate-50/60;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-slate-200/70;
+  }
+
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/70 to-transparent;
+  }
+
+  /* Page-level entrance: content settles in rather than snapping. Applied by
+     PageContainer so every route gets the same arrival feel. */
+  .page-enter {
+    @apply animate-fade-in-up;
+  }
+
+  /* Scroll container that doesn't advertise itself until you hover it. */
+  .scroll-soft {
+    scrollbar-gutter: stable;
+  }
 }
 
-* {
-  box-sizing: border-box;
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Fades the right edge of a horizontally scrollable strip so a cut-off
+     column reads as "more to scroll" instead of as a broken layout. */
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
+  }
 }

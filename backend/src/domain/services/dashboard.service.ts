@@ -79,3 +79,51 @@ export async function getDashboardSummary() {
     })),
   };
 }
+
+// Program-wide track distribution for the Students page: every student ever
+// taken through the Project Defence track, across every cohort (active and
+// archived), with no date window — deliberately unfiltered so the numbers are
+// a since-inception total rather than a snapshot of the current intake.
+//
+// The grouping rules mirror getCohortDashboard exactly: Track A rolls its
+// sub-tracks up (A + A1 + A2), and GRADUATED wins over whatever track the
+// student last held so nobody is counted twice. Keeping the two in step is the
+// point — these totals should reconcile against the sum of the per-cohort
+// dashboards, and they silently wouldn't if either side changed its mind about
+// where a graduated Track A student belongs.
+export async function getProgramWideTrackSummary() {
+  const grouped = await prisma.student.groupBy({
+    by: ["currentTrack", "programStatus"],
+    _count: true,
+  });
+
+  let trackA = 0;
+  let trackA1 = 0;
+  let trackA2 = 0;
+  let trackB = 0;
+  let graduated = 0;
+  let notOnTrack = 0;
+  let total = 0;
+
+  for (const row of grouped) {
+    total += row._count;
+    if (row.programStatus === "GRADUATED") {
+      graduated += row._count;
+      continue;
+    }
+    if (row.currentTrack === null) notOnTrack += row._count;
+    else if (row.currentTrack === "A") trackA += row._count;
+    else if (row.currentTrack === "A1") trackA1 += row._count;
+    else if (row.currentTrack === "A2") trackA2 += row._count;
+    else if (row.currentTrack === "B") trackB += row._count;
+  }
+
+  return {
+    graduatedCount: graduated,
+    trackACount: trackA + trackA1 + trackA2,
+    trackABreakdown: { unassignedSubTrack: trackA, a1: trackA1, a2: trackA2 },
+    trackBCount: trackB,
+    notOnTrackCount: notOnTrack,
+    totalStudents: total,
+  };
+}
