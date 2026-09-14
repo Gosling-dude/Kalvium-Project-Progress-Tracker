@@ -27,14 +27,18 @@ export async function listStudents(filters: StudentListFilters) {
 
   const where: Prisma.StudentWhereInput = {};
   if (filters.search) {
-    // SQLite's `contains` is case-insensitive by default. Postgres's is NOT —
-    // when cutting over to prisma/schema.postgres.prisma (see DEPLOYMENT.md),
-    // add `mode: "insensitive"` to each of these three filters to keep this
-    // search behaving the same way in production.
+    // SQLite's `contains` is case-insensitive by default; Postgres's is not.
+    // `mode` isn't a valid StringFilter field on the SQLite-generated client,
+    // so it's only spread in when the currently-generated client is Postgres
+    // (i.e. DATABASE_URL is a postgres:// URL) — keeps this file compiling
+    // against either of the two schemas described in DEPLOYMENT.md.
+    const caseInsensitive = process.env.DATABASE_URL?.startsWith("postgres")
+      ? { mode: "insensitive" as const }
+      : {};
     where.OR = [
-      { fullName: { contains: filters.search } },
-      { email: { contains: filters.search } },
-      { chosenProject: { contains: filters.search } },
+      { fullName: { contains: filters.search, ...caseInsensitive } },
+      { email: { contains: filters.search, ...caseInsensitive } },
+      { chosenProject: { contains: filters.search, ...caseInsensitive } },
     ];
   }
   if (filters.campusId) where.campusId = filters.campusId;

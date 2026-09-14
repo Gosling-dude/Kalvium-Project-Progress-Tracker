@@ -10,7 +10,10 @@ services:
     runtime: node
     rootDir: backend
     plan: starter
-    buildCommand: npm ci && npm run build:postgres
+    # --include=dev is required: with NODE_ENV=production set (below), npm ci
+    # skips devDependencies by default, but the build needs ts-node/typescript/
+    # prisma (all devDependencies) to run schema-parity check + compile.
+    buildCommand: npm ci --include=dev && npm run build:postgres
     startCommand: npm start
     healthCheckPath: /health
     envVars:
