@@ -45,7 +45,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
     <button
       type="button"
       onClick={onClose}
-      className="-mr-1 flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200"
+      className="-mr-1 flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-200 dark:active:bg-slate-700"
       aria-label="Close"
     >
       <Icon name="close" size={16} />
@@ -83,11 +83,13 @@ export function Modal({
           if (e.target === e.currentTarget) onClose();
         }}
       >
-        <div className={`w-full animate-scale-in rounded-xl bg-white shadow-pop ring-1 ring-slate-900/5 ${width}`}>
-          <div className="surface-header flex items-start justify-between gap-3 rounded-t-xl border-b border-slate-200/80 px-4 py-3">
+        <div
+          className={`w-full animate-scale-in rounded-xl bg-white shadow-pop ring-1 ring-slate-900/5 dark:bg-slate-900 dark:ring-white/10 ${width}`}
+        >
+          <div className="surface-header flex items-start justify-between gap-3 rounded-t-xl border-b border-slate-200/80 px-4 py-3 dark:border-slate-800">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-              {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+              {description && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{description}</p>}
             </div>
             <CloseButton onClose={onClose} />
           </div>
@@ -124,9 +126,11 @@ export function Drawer({
           if (e.target === e.currentTarget) onClose();
         }}
       >
-        <div className={`scroll-soft h-full w-full animate-slide-in-right overflow-y-auto bg-white shadow-pop ${width}`}>
-          <div className="surface-header sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3 backdrop-blur">
-            <h2 className="truncate text-sm font-semibold text-slate-900">{title}</h2>
+        <div
+          className={`scroll-soft h-full w-full animate-slide-in-right overflow-y-auto bg-white shadow-pop dark:bg-slate-900 ${width}`}
+        >
+          <div className="surface-header sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3 backdrop-blur dark:border-slate-800">
+            <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
             <CloseButton onClose={onClose} />
           </div>
           <div className="px-4 py-4">{children}</div>

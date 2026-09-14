@@ -18,7 +18,14 @@ export async function seedRubric() {
       threshold: PROJECT_REVIEW_RUBRIC_V1.threshold,
       dimensions: JSON.stringify(PROJECT_REVIEW_RUBRIC_V1.dimensions),
     },
-    update: {},
+    // Dimension text (scoring guidance, criteria) is descriptive metadata for
+    // this fixed version key, not a scored policy change, so it's kept in
+    // sync on every seed rather than requiring a new RubricVersion row.
+    update: {
+      totalMax: PROJECT_REVIEW_RUBRIC_V1.totalMax,
+      threshold: PROJECT_REVIEW_RUBRIC_V1.threshold,
+      dimensions: JSON.stringify(PROJECT_REVIEW_RUBRIC_V1.dimensions),
+    },
   });
 }
 

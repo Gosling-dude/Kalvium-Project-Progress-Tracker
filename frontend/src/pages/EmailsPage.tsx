@@ -60,21 +60,23 @@ function TemplatesPanel() {
       {data?.map((t) => (
         <div
           key={t.id}
-          className="surface group flex flex-col gap-2 p-4 transition-all duration-200 ease-smooth hover:border-slate-300 hover:shadow-sm sm:flex-row sm:items-center sm:justify-between"
+          className="surface group flex flex-col gap-2 p-4 transition-all duration-200 ease-smooth hover:border-slate-300 hover:shadow-sm dark:hover:border-slate-600 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex min-w-0 items-start gap-3">
-            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/30">
               <Icon name="mail" size={15} />
             </span>
             <div className="min-w-0">
-              <p className="truncate font-medium text-slate-900">{t.name}</p>
-              <p className="mt-0.5 truncate text-sm text-slate-500" title={t.subject}>
+              <p className="truncate font-medium text-slate-900 dark:text-slate-100">{t.name}</p>
+              <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400" title={t.subject}>
                 {t.subject}
               </p>
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-2xs text-slate-600">{t.key}</span>
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-2xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              {t.key}
+            </span>
             <Badge tone={t.active ? "success" : "neutral"} dot>
               v{t.version}
             </Badge>
@@ -105,7 +107,7 @@ function TemplatesPanel() {
                 onChange={(e) => setEditing({ ...editing, bodyHtml: e.target.value })}
               />
             </Field>
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
               <Button variant="secondary" onClick={() => setEditing(null)}>
                 Cancel
               </Button>
@@ -146,12 +148,12 @@ function LogPanel() {
       ) : (
         <div className="scroll-soft overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="surface-header border-b border-slate-200/80">
+            <thead className="surface-header border-b border-slate-200/80 dark:border-slate-800">
               <tr>
                 {["Template", "Recipients", "Status", "Triggered by", "When"].map((h, i) => (
                   <th
                     key={h}
-                    className={`whitespace-nowrap bg-slate-50/90 px-4 py-2.5 text-2xs font-semibold uppercase tracking-wider text-slate-500 ${
+                    className={`whitespace-nowrap bg-slate-50/90 px-4 py-2.5 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-900/90 dark:text-slate-400 ${
                       i === 4 ? "text-right" : "text-left"
                     }`}
                   >
@@ -160,7 +162,7 @@ function LogPanel() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {data?.data.map(
                 (e: {
                   id: string;
@@ -171,14 +173,14 @@ function LogPanel() {
                   createdAt: string;
                   triggeredBy?: { name: string };
                 }) => (
-                  <tr key={e.id} className="transition-colors hover:bg-slate-50/60">
+                  <tr key={e.id} className="transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                     <td
-                      className="max-w-[220px] truncate px-4 py-2.5 font-medium text-slate-800"
+                      className="max-w-[220px] truncate px-4 py-2.5 font-medium text-slate-800 dark:text-slate-200"
                       title={e.template?.name ?? e.templateKeySnapshot}
                     >
                       {e.template?.name ?? e.templateKeySnapshot}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 tabular text-slate-500">
+                    <td className="whitespace-nowrap px-4 py-2.5 tabular text-slate-500 dark:text-slate-400">
                       {e.recipients.length} recipient{e.recipients.length === 1 ? "" : "s"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5">
@@ -186,10 +188,13 @@ function LogPanel() {
                         {e.status}
                       </Badge>
                     </td>
-                    <td className="max-w-[140px] truncate px-4 py-2.5 text-slate-500" title={e.triggeredBy?.name ?? ""}>
+                    <td
+                      className="max-w-[140px] truncate px-4 py-2.5 text-slate-500 dark:text-slate-400"
+                      title={e.triggeredBy?.name ?? ""}
+                    >
                       {e.triggeredBy?.name}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-right text-xs text-slate-400">
+                    <td className="whitespace-nowrap px-4 py-2.5 text-right text-xs text-slate-400 dark:text-slate-500">
                       {new Date(e.createdAt).toLocaleString()}
                     </td>
                   </tr>

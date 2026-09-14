@@ -15,15 +15,15 @@ interface TimelineEvent {
 // icon and colour with no change here.
 function markerFor(type: string): { icon: IconName; classes: string } {
   const t = type.toUpperCase();
-  if (/FLAG/.test(t)) return { icon: "flag", classes: "bg-amber-50 text-amber-600 ring-amber-100" };
-  if (/EMAIL/.test(t)) return { icon: "mail", classes: "bg-blue-50 text-blue-600 ring-blue-100" };
-  if (/VIDEO/.test(t)) return { icon: "video", classes: "bg-violet-50 text-violet-600 ring-violet-100" };
-  if (/INTERVIEW/.test(t)) return { icon: "calendar", classes: "bg-indigo-50 text-indigo-600 ring-indigo-100" };
-  if (/GRADUAT/.test(t)) return { icon: "graduation", classes: "bg-emerald-50 text-emerald-600 ring-emerald-100" };
-  if (/DELIVERABLE|EVALUATION/.test(t)) return { icon: "clipboard", classes: "bg-slate-100 text-slate-500 ring-slate-200" };
-  if (/TRACK|TRANSITION|ROUTE/.test(t)) return { icon: "trendUp", classes: "bg-brand-50 text-brand-600 ring-brand-100" };
-  if (/REVIEW|RESUME/.test(t)) return { icon: "checkCircle", classes: "bg-teal-50 text-teal-600 ring-teal-100" };
-  return { icon: "info", classes: "bg-slate-100 text-slate-500 ring-slate-200" };
+  if (/FLAG/.test(t)) return { icon: "flag", classes: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/30" };
+  if (/EMAIL/.test(t)) return { icon: "mail", classes: "bg-blue-50 text-blue-600 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/30" };
+  if (/VIDEO/.test(t)) return { icon: "video", classes: "bg-violet-50 text-violet-600 ring-violet-100 dark:bg-violet-500/10 dark:text-violet-400 dark:ring-violet-500/30" };
+  if (/INTERVIEW/.test(t)) return { icon: "calendar", classes: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-500/30" };
+  if (/GRADUAT/.test(t)) return { icon: "graduation", classes: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/30" };
+  if (/DELIVERABLE|EVALUATION/.test(t)) return { icon: "clipboard", classes: "bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700" };
+  if (/TRACK|TRANSITION|ROUTE/.test(t)) return { icon: "trendUp", classes: "bg-brand-50 text-brand-600 ring-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/30" };
+  if (/REVIEW|RESUME/.test(t)) return { icon: "checkCircle", classes: "bg-teal-50 text-teal-600 ring-teal-100 dark:bg-teal-500/10 dark:text-teal-400 dark:ring-teal-500/30" };
+  return { icon: "info", classes: "bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700" };
 }
 
 export function OverviewTab({ detail }: { detail: { timeline: TimelineEvent[]; student: { notes: string | null } } }) {
@@ -35,7 +35,7 @@ export function OverviewTab({ detail }: { detail: { timeline: TimelineEvent[]; s
         <Card>
           <CardHeader icon="edit" title="Notes" />
           <CardBody>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{detail.student.notes}</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300">{detail.student.notes}</p>
           </CardBody>
         </Card>
       )}
@@ -53,7 +53,7 @@ export function OverviewTab({ detail }: { detail: { timeline: TimelineEvent[]; s
             <ol className="relative space-y-1">
               {/* Continuous spine behind the markers, inset so it lines up with
                   their centres and stops cleanly at the last entry. */}
-              <span aria-hidden="true" className="absolute bottom-3 left-4 top-3 w-px -translate-x-1/2 bg-slate-200" />
+              <span aria-hidden="true" className="absolute bottom-3 left-4 top-3 w-px -translate-x-1/2 bg-slate-200 dark:bg-slate-700" />
               {events.map((e, i) => {
                 const m = markerFor(e.type);
                 return (
@@ -64,13 +64,13 @@ export function OverviewTab({ detail }: { detail: { timeline: TimelineEvent[]; s
                       <Icon name={m.icon} size={14} />
                     </span>
                     <div className="min-w-0 flex-1 pt-1">
-                      <p className="text-sm font-medium text-slate-900">{e.title}</p>
-                      {e.detail && <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{e.detail}</p>}
-                      <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{e.title}</p>
+                      {e.detail && <p className="mt-0.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{e.detail}</p>}
+                      <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-400 dark:text-slate-500">
                         <time dateTime={e.at}>{new Date(e.at).toLocaleString()}</time>
                         {e.actor && (
                           <>
-                            <span className="text-slate-300">·</span>
+                            <span className="text-slate-300 dark:text-slate-600">·</span>
                             <span>{e.actor}</span>
                           </>
                         )}

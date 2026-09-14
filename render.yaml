@@ -1,0 +1,48 @@
+# Render Blueprint for the backend API — see https://render.com/docs/blueprint-spec
+# The frontend is deployed separately on Vercel (see frontend/vercel.json),
+# and the database is Neon (external Postgres, not a Render-managed database).
+#
+# On first deploy, Render will prompt for every env var marked `sync: false`
+# below. See backend/.env.example and DEPLOYMENT.md for what each one means.
+services:
+  - type: web
+    name: kalvium-tracker-backend
+    runtime: node
+    rootDir: backend
+    plan: starter
+    buildCommand: npm ci && npm run build:postgres
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false # Neon pooled connection string
+      - key: DIRECT_DATABASE_URL
+        sync: false # Neon direct/unpooled connection string (used for migrations)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: COOKIE_NAME
+        value: kalvium_session
+      - key: CORS_ORIGIN
+        sync: false # exact deployed frontend origin(s), comma-separated
+      - key: EMAIL_MODE
+        value: mock # flip to smtp only after verifying real delivery — see docs/EMAIL_SYSTEM.md
+      - key: EMAIL_FROM
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false

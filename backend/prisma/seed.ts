@@ -254,7 +254,9 @@ async function main() {
   const admin = await seedAdminUser(adminEmail, adminPassword);
   console.log(`Admin user ready: ${admin.email}`);
 
-  if (process.env.NODE_ENV !== "test") {
+  // Fake demo students/cohorts/coaches — dev/staging convenience only.
+  // Never in production, and never in tests (tests seed their own fixtures).
+  if (process.env.NODE_ENV !== "test" && process.env.NODE_ENV !== "production") {
     await seedDevData(admin.id);
   }
 }

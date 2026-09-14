@@ -4,13 +4,16 @@ import {
   assignDeliverable,
   confirmGrowthCoachEvaluationTransition,
   deleteDeliverableAssignment,
+  deriveDeliverableSetStatus,
   dismissGrowthCoachEvaluationTransition,
   getDeliverablesTableHtml,
+  markDeliverableSetEmailed,
   recordGrowthCoachEvaluation,
   sumEstimatedTime,
   updateDeliverableAssignment,
   verifyDeliverable,
 } from "../../src/domain/services/developmentTrack.service";
+import { recordTrackTransition } from "../../src/domain/services/trackTransition.service";
 import { createCampusCohortStudent } from "../helpers";
 import { testAdminId } from "../setup";
 
@@ -119,6 +122,149 @@ describe("sumEstimatedTime — the one progress number for a student's developme
 
     const summary = await sumEstimatedTime(student.id, "A2");
     expect(summary).toEqual({ value: 10, unit: "HOURS", count: 2, verifiedCount: 1 });
+  });
+});
+
+describe("markDeliverableSetEmailed — one set per A2/Track B stay, deadline from total estimated time", () => {
+  it("computes the deadline from total hours for A2, rounding up to whole days", async () => {
+    const student = await makeStudentOnTrack("A2");
+    await assignDeliverable({
+      studentId: student.id,
+      track: "A2",
+      actorId: testAdminId,
+      direct: { ...DIRECT_FIELDS, estimatedTimeValue: 30, estimatedTimeUnit: "HOURS" }, // 30 / 8 = 3.75 days -> ceil to 4
+    });
+    const before = Date.now();
+    const result = await markDeliverableSetEmailed(student.id, "A2", testAdminId);
+    expect(result.deliverableEmailSentAt).not.toBeNull();
+    const daysAdded = Math.round((result.deliverableDeadline!.getTime() - before) / (24 * 60 * 60 * 1000));
+    expect(daysAdded).toBe(4);
+  });
+
+  it("computes the deadline from total days for Track B directly", async () => {
+    const student = await makeStudentOnTrack("B");
+    await assignDeliverable({
+      studentId: student.id,
+      track: "B",
+      actorId: testAdminId,
+      direct: { ...DIRECT_FIELDS, estimatedTimeValue: 5, estimatedTimeUnit: "DAYS" },
+    });
+    const before = Date.now();
+    const result = await markDeliverableSetEmailed(student.id, "B", testAdminId);
+    const daysAdded = Math.round((result.deliverableDeadline!.getTime() - before) / (24 * 60 * 60 * 1000));
+    expect(daysAdded).toBe(5);
+  });
+
+  it("refuses to assign another deliverable once the set has been emailed", async () => {
+    const student = await makeStudentOnTrack("A2");
+    await assignDeliverable({
+      studentId: student.id,
+      track: "A2",
+      actorId: testAdminId,
+      direct: { ...DIRECT_FIELDS, estimatedTimeValue: 6, estimatedTimeUnit: "HOURS" },
+    });
+    await markDeliverableSetEmailed(student.id, "A2", testAdminId);
+
+    await expect(
+      assignDeliverable({
+        studentId: student.id,
+        track: "A2",
+        actorId: testAdminId,
+        direct: { ...DIRECT_FIELDS, estimatedTimeValue: 2, estimatedTimeUnit: "HOURS" },
+      }),
+    ).rejects.toThrow(/already been emailed/);
+  });
+
+  it("unlocks a fresh set once the student's track actually changes", async () => {
+    const student = await makeStudentOnTrack("A2");
+    await assignDeliverable({
+      studentId: student.id,
+      track: "A2",
+      actorId: testAdminId,
+      direct: { ...DIRECT_FIELDS, estimatedTimeValue: 6, estimatedTimeUnit: "HOURS" },
+    });
+    await markDeliverableSetEmailed(student.id, "A2", testAdminId);
+
+    await recordTrackTransition({
+      studentId: student.id,
+      toTrack: "A1",
+      toStage: "A1_INTENSIVE",
+      toProgramStatus: "ACTIVE",
+      reason: "Growth Coach confirmed sufficient growth; promoted to A1.",
+      sourceType: "MANUAL",
+      actorId: testAdminId,
+    });
+
+    const cleared = await prisma.student.findUnique({ where: { id: student.id } });
+    expect(cleared?.deliverableEmailSentAt).toBeNull();
+    expect(cleared?.deliverableDeadline).toBeNull();
+  });
+
+  it("unlocks a fresh set when a Growth Coach checkpoint evaluation concludes the round, even if the track stays the same (NOT_SUFFICIENT)", async () => {
+    const student = await makeStudentOnTrack("A2");
+    await assignDeliverable({
+      studentId: student.id,
+      track: "A2",
+      actorId: testAdminId,
+      direct: { ...DIRECT_FIELDS, estimatedTimeValue: 6, estimatedTimeUnit: "HOURS" },
+    });
+    await markDeliverableSetEmailed(student.id, "A2", testAdminId);
+
+    await recordGrowthCoachEvaluation({
+      studentId: student.id,
+      track: "A2",
+      decision: "NOT_SUFFICIENT",
+      feedback: "Ownership gap not yet closed; needs a sharper follow-up set.",
+      actorId: testAdminId,
+    });
+
+    const cleared = await prisma.student.findUnique({ where: { id: student.id } });
+    expect(cleared?.currentTrack).toBe("A2");
+    expect(cleared?.deliverableEmailSentAt).toBeNull();
+    expect(cleared?.deliverableDeadline).toBeNull();
+
+    const assignment = await assignDeliverable({
+      studentId: student.id,
+      track: "A2",
+      actorId: testAdminId,
+      direct: { ...DIRECT_FIELDS, estimatedTimeValue: 2, estimatedTimeUnit: "HOURS" },
+    });
+    expect(assignment.id).toBeDefined();
+  });
+});
+
+describe("deriveDeliverableSetStatus", () => {
+  const base = { currentTrack: "A2" as const, deliverableEmailSentAt: null as Date | null, deliverableDeadline: null as Date | null };
+
+  it("returns null for tracks outside A2/B", () => {
+    expect(deriveDeliverableSetStatus({ ...base, currentTrack: "A1" }, [])).toBeNull();
+  });
+
+  it("returns NO_DELIVERABLES when nothing is assigned for the current track", () => {
+    expect(deriveDeliverableSetStatus(base, [{ track: "B", status: "VERIFIED" }])).toBe("NO_DELIVERABLES");
+  });
+
+  it("returns DRAFT before the set has been emailed", () => {
+    expect(deriveDeliverableSetStatus(base, [{ track: "A2", status: "NOT_STARTED" }])).toBe("DRAFT");
+  });
+
+  it("returns ON_TRACK when emailed, before the deadline, and not fully submitted", () => {
+    const s = { ...base, deliverableEmailSentAt: new Date(), deliverableDeadline: new Date(Date.now() + 86400000) };
+    expect(deriveDeliverableSetStatus(s, [{ track: "A2", status: "IN_PROGRESS" }])).toBe("ON_TRACK");
+  });
+
+  it("returns OVERDUE once the deadline has passed and work remains", () => {
+    const s = { ...base, deliverableEmailSentAt: new Date(), deliverableDeadline: new Date(Date.now() - 86400000) };
+    expect(deriveDeliverableSetStatus(s, [{ track: "A2", status: "IN_PROGRESS" }])).toBe("OVERDUE");
+  });
+
+  it("returns ALL_SUBMITTED (not OVERDUE) once submitted even past deadline", () => {
+    const s = { ...base, deliverableEmailSentAt: new Date(), deliverableDeadline: new Date(Date.now() - 86400000) };
+    expect(deriveDeliverableSetStatus(s, [{ track: "A2", status: "SUBMITTED" }])).toBe("ALL_SUBMITTED");
+  });
+
+  it("returns COMPLETED once every deliverable is VERIFIED", () => {
+    expect(deriveDeliverableSetStatus(base, [{ track: "A2", status: "VERIFIED" }])).toBe("COMPLETED");
   });
 });
 

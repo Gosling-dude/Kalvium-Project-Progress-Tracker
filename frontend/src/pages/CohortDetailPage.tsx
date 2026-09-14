@@ -77,7 +77,9 @@ export function CohortDetailPage() {
         title={cohort.name}
         meta={
           <>
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">{cohort.code}</span>
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              {cohort.code}
+            </span>
             <Badge tone={cohort.status === "ACTIVE" ? "success" : "neutral"} dot>
               {cohort.status}
             </Badge>
@@ -117,52 +119,62 @@ export function CohortDetailPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button
             onClick={() => navigate(`/cohorts/${id}/track-a`)}
-            className="group relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 text-left shadow-xs transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
+            className="group relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 text-left shadow-xs transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-500/50"
           >
             <span
               aria-hidden="true"
               className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-500 opacity-70"
             />
             <div className="flex items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Icon name="clipboard" size={15} className="text-blue-500" />
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <Icon name="clipboard" size={15} className="text-blue-500 dark:text-blue-400" />
                 Track A
               </h2>
               <Badge tone="info">{dashboard.trackACount} students</Badge>
             </div>
-            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
               <span>
                 Not yet in a sub-track:{" "}
-                <strong className="font-semibold tabular text-slate-900">{dashboard.trackABreakdown.unassignedSubTrack}</strong>
+                <strong className="font-semibold tabular text-slate-900 dark:text-slate-100">
+                  {dashboard.trackABreakdown.unassignedSubTrack}
+                </strong>
               </span>
               <span>
-                A1: <strong className="font-semibold tabular text-emerald-600">{dashboard.trackABreakdown.a1}</strong>
+                A1:{" "}
+                <strong className="font-semibold tabular text-emerald-600 dark:text-emerald-400">
+                  {dashboard.trackABreakdown.a1}
+                </strong>
               </span>
               <span>
-                A2: <strong className="font-semibold tabular text-amber-600">{dashboard.trackABreakdown.a2}</strong>
+                A2:{" "}
+                <strong className="font-semibold tabular text-amber-600 dark:text-amber-400">
+                  {dashboard.trackABreakdown.a2}
+                </strong>
               </span>
             </div>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-blue-600 opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-blue-600 opacity-0 transition-opacity group-hover:opacity-100 dark:text-blue-400">
               Open Track A <Icon name="chevronRight" size={12} />
             </span>
           </button>
           <button
             onClick={() => navigate(`/cohorts/${id}/track-b`)}
-            className="group relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 text-left shadow-xs transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-rose-300 hover:shadow-md"
+            className="group relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 text-left shadow-xs transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-rose-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-rose-500/50"
           >
             <span
               aria-hidden="true"
               className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-rose-400 to-rose-500 opacity-70"
             />
             <div className="flex items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Icon name="sparkle" size={15} className="text-rose-500" />
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <Icon name="sparkle" size={15} className="text-rose-500 dark:text-rose-400" />
                 Track B
               </h2>
               <Badge tone="danger">{dashboard.trackBCount} students</Badge>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-slate-500">Foundational development pipeline — no sub-tracks.</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-rose-600 opacity-0 transition-opacity group-hover:opacity-100">
+            <p className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              Foundational development pipeline — no sub-tracks.
+            </p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-rose-600 opacity-0 transition-opacity group-hover:opacity-100 dark:text-rose-400">
               Open Track B <Icon name="chevronRight" size={12} />
             </span>
           </button>
@@ -170,12 +182,14 @@ export function CohortDetailPage() {
       )}
 
       <div className="surface">
-        <div className="surface-header flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-900">Students</h2>
+        <div className="surface-header flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3 dark:border-slate-800">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Students</h2>
           <Badge tone="neutral">{activeEnrollments.length} active</Badge>
         </div>
-        <div className="divide-y divide-slate-100 overflow-x-auto">
-          <div className={`grid ${ROSTER_GRID_COLS} min-w-[52rem] gap-3 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500`}>
+        <div className="divide-y divide-slate-100 overflow-x-auto dark:divide-slate-800">
+          <div
+            className={`grid ${ROSTER_GRID_COLS} min-w-[52rem] gap-3 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800/40 dark:text-slate-400`}
+          >
             <span>Name</span>
             <span>Email</span>
             <span>Campus</span>
@@ -195,10 +209,10 @@ export function CohortDetailPage() {
           ))}
           {activeEnrollments.length === 0 && (
             <div className="flex flex-col items-center gap-3 px-4 py-14 text-center">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:ring-slate-700">
                 <Icon name="students" size={20} />
               </span>
-              <p className="text-sm font-medium text-slate-600">No students enrolled yet.</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No students enrolled yet.</p>
               <Button size="sm" variant="secondary" icon="plus" onClick={() => setShowEnroll(true)}>
                 Add Students
               </Button>
@@ -258,19 +272,22 @@ function RosterRow({
     <div>
       <div
         className={`grid ${ROSTER_GRID_COLS} min-w-[52rem] cursor-pointer items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-          expanded ? "bg-brand-50/50" : "hover:bg-slate-50"
+          expanded ? "bg-brand-50/50 dark:bg-brand-500/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/40"
         }`}
         onClick={onToggle}
       >
-        <span className="flex min-w-0 items-center gap-1.5 font-medium text-slate-900" title={student.fullName}>
+        <span
+          className="flex min-w-0 items-center gap-1.5 font-medium text-slate-900 dark:text-slate-100"
+          title={student.fullName}
+        >
           <Icon
             name="chevronRight"
             size={13}
-            className={`shrink-0 text-slate-400 transition-transform duration-200 ease-smooth ${expanded ? "rotate-90 text-brand-600" : ""}`}
+            className={`shrink-0 text-slate-400 transition-transform duration-200 ease-smooth dark:text-slate-500 ${expanded ? "rotate-90 text-brand-600 dark:text-brand-400" : ""}`}
           />
           <span className="truncate">{student.fullName}</span>
         </span>
-        <span className="truncate text-slate-500" title={student.email}>
+        <span className="truncate text-slate-500 dark:text-slate-400" title={student.email}>
           {student.email}
         </span>
         <span className="truncate" title={student.campus?.name ?? ""}>
@@ -283,7 +300,7 @@ function RosterRow({
         <span className="flex flex-wrap items-center justify-end gap-2">
           <StatusBadge status={student.displayStatus} />
           <button
-            className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-800"
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-800 dark:text-brand-400 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/students/${student.id}`);
@@ -293,7 +310,7 @@ function RosterRow({
             <Icon name="chevronRight" size={12} />
           </button>
           <button
-            className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-700 disabled:opacity-40"
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-700 disabled:opacity-40 dark:text-slate-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
             disabled={removeMutation.isPending}
             title="Remove from this cohort"
             onClick={(e) => {
@@ -363,12 +380,17 @@ function ResumeEvalPanel({ student, onChanged }: { student: RosterStudent; onCha
     onChanged();
   }
 
-  if (isLoading || !detail) return <div className="border-t border-slate-100 p-4"><Spinner /></div>;
+  if (isLoading || !detail)
+    return (
+      <div className="border-t border-slate-100 p-4 dark:border-slate-800">
+        <Spinner />
+      </div>
+    );
 
   const completedReview = detail.projectReviews.find((r: { status: string }) => r.status === "COMPLETED");
 
   return (
-    <div className="space-y-4 border-t border-slate-100 bg-slate-50/60 p-4">
+    <div className="space-y-4 border-t border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/30">
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Resume Google Drive link" hint="Editable any time — changing it after evaluation does not retroactively alter the recorded score">
           <Input className="min-w-[24rem]" value={resumeLink} onChange={(e) => setResumeLink(e.target.value)} placeholder="https://drive.google.com/..." />
@@ -381,7 +403,7 @@ function ResumeEvalPanel({ student, onChanged }: { student: RosterStudent; onCha
             href={student.resumeLink}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-800"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-800 dark:text-brand-400 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
           >
             <Icon name="external" size={13} />
             Open resume
@@ -396,7 +418,7 @@ function ResumeEvalPanel({ student, onChanged }: { student: RosterStudent; onCha
 
       {completedReview && (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Send the result to the student:</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Send the result to the student:</span>
           <EmailComposer
             student={student}
             defaultTemplateKey="RESUME_REVIEW_RESULT"
@@ -449,31 +471,35 @@ function EnrollModal({ cohortId, onClose, onDone }: { cohortId: string; onClose:
         <Field label="Search" hint="Select one or more existing students. To add a brand-new student, create them first from Students, or use Bulk Upload (CSV).">
           <Input placeholder="Search name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </Field>
-        <div className="scroll-soft max-h-72 space-y-0.5 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/40 p-1.5">
+        <div className="scroll-soft max-h-72 space-y-0.5 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/40 p-1.5 dark:border-slate-700 dark:bg-slate-800/30">
           {filtered.map((s) => {
             const isSelected = selected.includes(s.id);
             return (
               <label
                 key={s.id}
                 className={`flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors ${
-                  isSelected ? "bg-brand-50 ring-1 ring-inset ring-brand-100" : "hover:bg-white"
+                  isSelected
+                    ? "bg-brand-50 ring-1 ring-inset ring-brand-100 dark:bg-brand-500/10 dark:ring-brand-500/30"
+                    : "hover:bg-white dark:hover:bg-slate-800"
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => toggle(s.id)}
-                  className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-brand-600 focus:ring-2 focus:ring-brand-500"
+                  className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-brand-600 focus:ring-2 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-800"
                 />
-                <span className="min-w-0 truncate font-medium text-slate-800">{s.fullName}</span>
-                <span className="min-w-0 truncate text-xs text-slate-400">{s.email}</span>
+                <span className="min-w-0 truncate font-medium text-slate-800 dark:text-slate-200">{s.fullName}</span>
+                <span className="min-w-0 truncate text-xs text-slate-400 dark:text-slate-500">{s.email}</span>
               </label>
             );
           })}
-          {filtered.length === 0 && <p className="px-2 py-6 text-center text-sm text-slate-500">No matching students.</p>}
+          {filtered.length === 0 && (
+            <p className="px-2 py-6 text-center text-sm text-slate-500 dark:text-slate-400">No matching students.</p>
+          )}
         </div>
-        <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
-          <span className="text-xs font-medium tabular text-slate-500">
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <span className="text-xs font-medium tabular text-slate-500 dark:text-slate-400">
             {selected.length > 0 ? `${selected.length} selected` : `${filtered.length} available`}
           </span>
           <div className="flex gap-2">
@@ -544,21 +570,21 @@ function BulkUploadModal({ cohortId, onClose, onDone }: { cohortId: string; onCl
     <Modal open onClose={onClose} title="Bulk Upload Students (CSV/XLSX)" width="max-w-2xl">
       <div className="space-y-3">
         {error && <ErrorBanner message={error} />}
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Recognized columns include email, full name, campus, growth coach (name and/or "Growth Coach Email"), batch/year, chosen
           project, and a resume link. Every row is checked against the student database first: a matching email is reused as-is (never
           duplicated) and any blank fields on it get filled in from this file; a new email creates a new student. Either way, every
           student in the file gets added to this cohort. A campus or growth coach that isn't already in the system is added
           automatically (marked inactive) rather than left blank — review it in Settings afterward.
         </p>
-        <label className="group flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-4 py-7 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/40">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-400 shadow-xs ring-1 ring-inset ring-slate-200 transition-colors group-hover:text-brand-600 group-hover:ring-brand-200">
+        <label className="group flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-4 py-7 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:border-brand-500 dark:hover:bg-brand-500/10">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-400 shadow-xs ring-1 ring-inset ring-slate-200 transition-colors group-hover:text-brand-600 group-hover:ring-brand-200 dark:bg-slate-800 dark:text-slate-500 dark:ring-slate-700 dark:group-hover:text-brand-400 dark:group-hover:ring-brand-500/30">
             <Icon name="upload" size={18} />
           </span>
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             {previewMutation.isPending ? "Reading file…" : "Choose a CSV or XLSX file"}
           </span>
-          <span className="text-xs text-slate-500">The file is validated before anything is written.</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">The file is validated before anything is written.</span>
           <input
             type="file"
             accept=".csv,.xlsx"
@@ -572,7 +598,7 @@ function BulkUploadModal({ cohortId, onClose, onDone }: { cohortId: string; onCl
           />
         </label>
         {preview && (
-          <div className="animate-fade-in space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+          <div className="animate-fade-in space-y-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="success" dot>
                 {preview.validRows.length} of {preview.totalRows} rows valid
@@ -589,14 +615,14 @@ function BulkUploadModal({ cohortId, onClose, onDone }: { cohortId: string; onCl
               )}
             </div>
             {(preview.errors.length > 0 || preview.warnings.length > 0) && (
-              <div className="space-y-1 rounded-md bg-slate-50 p-2.5">
+              <div className="space-y-1 rounded-md bg-slate-50 p-2.5 dark:bg-slate-800/60">
                 {preview.errors.slice(0, 5).map((e, i) => (
-                  <p key={`e${i}`} className="text-xs text-rose-600">
+                  <p key={`e${i}`} className="text-xs text-rose-600 dark:text-rose-400">
                     <span className="font-semibold tabular">Row {e.rowNumber}:</span> {e.message}
                   </p>
                 ))}
                 {preview.warnings.slice(0, 5).map((w, i) => (
-                  <p key={`w${i}`} className="text-xs text-amber-700">
+                  <p key={`w${i}`} className="text-xs text-amber-700 dark:text-amber-400">
                     <span className="font-semibold tabular">Row {w.rowNumber}:</span> {w.message}
                   </p>
                 ))}
@@ -617,8 +643,8 @@ function BulkUploadModal({ cohortId, onClose, onDone }: { cohortId: string; onCl
         )}
         {result && (
           <div className="animate-fade-in space-y-2">
-            <div className="flex items-start gap-2.5 rounded-lg bg-emerald-50 p-3 text-sm leading-relaxed text-emerald-800 ring-1 ring-inset ring-emerald-200">
-              <Icon name="checkCircle" size={16} className="mt-0.5 shrink-0 text-emerald-500" />
+            <div className="flex items-start gap-2.5 rounded-lg bg-emerald-50 p-3 text-sm leading-relaxed text-emerald-800 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30">
+              <Icon name="checkCircle" size={16} className="mt-0.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
               <span>
                 {result.created} new student{result.created === 1 ? "" : "s"} created · {result.updatedExisting} existing record
                 {result.updatedExisting === 1 ? "" : "s"} filled in · {result.skippedExisting} already existed on file ·{" "}
@@ -626,9 +652,9 @@ function BulkUploadModal({ cohortId, onClose, onDone }: { cohortId: string; onCl
               </span>
             </div>
             {result.warnings.length > 0 && (
-              <div className="space-y-1 rounded-lg bg-amber-50 p-3 ring-1 ring-inset ring-amber-200">
+              <div className="space-y-1 rounded-lg bg-amber-50 p-3 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/30">
                 {result.warnings.map((w, i) => (
-                  <p key={i} className="text-xs text-amber-800">
+                  <p key={i} className="text-xs text-amber-800 dark:text-amber-300">
                     <span className="font-semibold tabular">Row {w.rowNumber}:</span> {w.message}
                   </p>
                 ))}
@@ -636,7 +662,7 @@ function BulkUploadModal({ cohortId, onClose, onDone }: { cohortId: string; onCl
             )}
           </div>
         )}
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
           <Button type="button" variant="secondary" onClick={onClose}>
             Close
           </Button>

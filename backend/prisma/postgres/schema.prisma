@@ -1,22 +1,33 @@
-// Kalvium Project Defence Progress Tracker — Data Model
+// Kalvium Project Defence Progress Tracker — Data Model (PRODUCTION / Postgres)
 //
-// Provider note: SQLite is used for local development/tests because it needs no
-// external service to run. A parallel PostgreSQL (Neon) schema for production
-// is kept at prisma/postgres/schema.prisma — see DEPLOYMENT.md. The two files'
-// models must be kept identical (only the `datasource` block differs);
-// `npm run check:schema-parity` verifies that on every change.
-// SQLite does not support native Prisma enums, so all "enum-like" fields are
-// modeled as String columns whose allowed values are defined and validated in
-// backend/src/domain/constants/enums.ts (single source of truth, shared by
-// every service and by zod request validation). This also means switching the
-// datasource provider later does not require touching every enum field.
+// This is the production counterpart of prisma/schema.prisma (SQLite, used
+// for local dev/tests). The two files' models must stay identical — only
+// this `datasource` block differs — run `npm run check:schema-parity`
+// after editing either one; it fails the build if they've drifted. See
+// DEPLOYMENT.md for the full cutover steps and why this two-file split
+// exists (Prisma's datasource `provider` must be a literal, so it can't be
+// switched per-environment from one schema file).
+//
+// "Enum-like" fields are still modeled as plain String columns (not native
+// Postgres enums) whose allowed values are defined and validated in
+// backend/src/domain/constants/enums.ts — the single source of truth,
+// shared by every service and by zod request validation. That was
+// originally a SQLite compatibility constraint and is kept here too so
+// adding a new allowed value never needs a migration on either database.
+//
+// directUrl: Neon's pooled connection (DATABASE_URL, via PgBouncer) doesn't
+// support the DDL statements migrations issue, so migrations run against
+// directUrl (Neon's unpooled connection string) while the app itself uses
+// the pooled DATABASE_URL at runtime. Point both at the same database when
+// not using a pooler (e.g. a self-hosted Postgres).
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ------------------------------------------------------------------

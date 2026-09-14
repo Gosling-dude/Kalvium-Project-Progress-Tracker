@@ -19,14 +19,53 @@ interface AuditEvent {
 // Derived from the action verb rather than an exhaustive map, so new audit
 // actions get a sensible icon and colour without needing a code change here.
 function describeAction(action: string): { icon: IconName; ring: string; text: string } {
-  if (/DELET|REMOV/.test(action)) return { icon: "trash", ring: "bg-rose-50 text-rose-600 ring-rose-100", text: "text-rose-700" };
-  if (/CREAT|ASSIGN|ADD|ENROL/.test(action)) return { icon: "plus", ring: "bg-emerald-50 text-emerald-600 ring-emerald-100", text: "text-emerald-700" };
-  if (/VERIF|CONFIRM|COMPLET|GRADUAT/.test(action)) return { icon: "checkCircle", ring: "bg-emerald-50 text-emerald-600 ring-emerald-100", text: "text-emerald-700" };
-  if (/FLAG/.test(action)) return { icon: "flag", ring: "bg-amber-50 text-amber-600 ring-amber-100", text: "text-amber-700" };
-  if (/EMAIL|SENT/.test(action)) return { icon: "mail", ring: "bg-blue-50 text-blue-600 ring-blue-100", text: "text-blue-700" };
-  if (/TRANSITION|MOVE|TRACK/.test(action)) return { icon: "trendUp", ring: "bg-brand-50 text-brand-600 ring-brand-100", text: "text-brand-700" };
-  if (/UPDAT|EDIT|CHANG/.test(action)) return { icon: "edit", ring: "bg-slate-100 text-slate-500 ring-slate-200", text: "text-slate-700" };
-  return { icon: "info", ring: "bg-slate-100 text-slate-500 ring-slate-200", text: "text-slate-700" };
+  if (/DELET|REMOV/.test(action))
+    return {
+      icon: "trash",
+      ring: "bg-rose-50 text-rose-600 ring-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/30",
+      text: "text-rose-700 dark:text-rose-400",
+    };
+  if (/CREAT|ASSIGN|ADD|ENROL/.test(action))
+    return {
+      icon: "plus",
+      ring: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/30",
+      text: "text-emerald-700 dark:text-emerald-400",
+    };
+  if (/VERIF|CONFIRM|COMPLET|GRADUAT/.test(action))
+    return {
+      icon: "checkCircle",
+      ring: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/30",
+      text: "text-emerald-700 dark:text-emerald-400",
+    };
+  if (/FLAG/.test(action))
+    return {
+      icon: "flag",
+      ring: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/30",
+      text: "text-amber-700 dark:text-amber-400",
+    };
+  if (/EMAIL|SENT/.test(action))
+    return {
+      icon: "mail",
+      ring: "bg-blue-50 text-blue-600 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/30",
+      text: "text-blue-700 dark:text-blue-400",
+    };
+  if (/TRANSITION|MOVE|TRACK/.test(action))
+    return {
+      icon: "trendUp",
+      ring: "bg-brand-50 text-brand-600 ring-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/30",
+      text: "text-brand-700 dark:text-brand-400",
+    };
+  if (/UPDAT|EDIT|CHANG/.test(action))
+    return {
+      icon: "edit",
+      ring: "bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700",
+      text: "text-slate-700 dark:text-slate-300",
+    };
+  return {
+    icon: "info",
+    ring: "bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700",
+    text: "text-slate-700 dark:text-slate-300",
+  };
 }
 
 export function HistoryPage() {
@@ -58,9 +97,11 @@ export function HistoryPage() {
             setPage(1);
           }}
         />
-        <span className="text-xs text-slate-500">e.g. Student, ProjectReview, Interview, Flag</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">e.g. Student, ProjectReview, Interview, Flag</span>
         {data?.pagination && (
-          <span className="ml-auto pr-1 text-xs font-medium tabular text-slate-500">{data.pagination.total} events</span>
+          <span className="ml-auto pr-1 text-xs font-medium tabular text-slate-500 dark:text-slate-400">
+            {data.pagination.total} events
+          </span>
         )}
       </div>
 
@@ -69,11 +110,14 @@ export function HistoryPage() {
           <TableSkeleton rows={8} cols={3} />
         ) : events && events.length > 0 ? (
           <>
-            <ol className="divide-y divide-slate-100">
+            <ol className="divide-y divide-slate-100 dark:divide-slate-800">
               {events.map((e) => {
                 const a = describeAction(e.action);
                 return (
-                  <li key={e.id} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-slate-50/70">
+                  <li
+                    key={e.id}
+                    className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
+                  >
                     <span
                       className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ring-inset ${a.ring}`}
                     >
@@ -83,16 +127,19 @@ export function HistoryPage() {
                       <p className={`truncate text-sm font-medium ${a.text}`} title={e.action.replace(/_/g, " ")}>
                         {e.action.replace(/_/g, " ")}
                       </p>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
-                        <span className="font-medium text-slate-600">{e.entityType}</span>
-                        <span className="rounded bg-slate-100 px-1 py-px font-mono text-2xs text-slate-500">
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-medium text-slate-600 dark:text-slate-300">{e.entityType}</span>
+                        <span className="rounded bg-slate-100 px-1 py-px font-mono text-2xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                           {e.entityId.slice(0, 8)}
                         </span>
-                        <span className="text-slate-300">·</span>
+                        <span className="text-slate-300 dark:text-slate-600">·</span>
                         <span>{e.actor?.name ?? "system"}</span>
                       </p>
                     </div>
-                    <time className="shrink-0 whitespace-nowrap text-xs text-slate-400" dateTime={e.createdAt}>
+                    <time
+                      className="shrink-0 whitespace-nowrap text-xs text-slate-400 dark:text-slate-500"
+                      dateTime={e.createdAt}
+                    >
                       {new Date(e.createdAt).toLocaleString()}
                     </time>
                   </li>

@@ -61,22 +61,26 @@ export function CohortsPage() {
                 header: "Name",
                 render: (c) => (
                   <span className="flex items-center gap-2.5">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/30">
                       <Icon name="layers" size={14} />
                     </span>
-                    <span className="font-medium text-slate-900">{c.name}</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100">{c.name}</span>
                   </span>
                 ),
               },
               {
                 header: "Code",
                 render: (c) => (
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">{c.code}</span>
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                    {c.code}
+                  </span>
                 ),
               },
               {
                 header: "Active students",
-                render: (c) => <span className="font-medium tabular text-slate-900">{c.activeStudentCount ?? 0}</span>,
+                render: (c) => (
+                  <span className="font-medium tabular text-slate-900 dark:text-slate-100">{c.activeStudentCount ?? 0}</span>
+                ),
               },
               {
                 header: "Status",
@@ -88,7 +92,7 @@ export function CohortsPage() {
               },
               {
                 header: "",
-                className: "w-10 text-right text-slate-300",
+                className: "w-10 text-right text-slate-300 dark:text-slate-700",
                 render: () => <Icon name="chevronRight" size={15} />,
               },
             ]}
@@ -141,7 +145,7 @@ function CreateCohortModal({ onClose, onCreated }: { onClose: () => void; onCrea
         <Field label="Description" hint="Optional">
           <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>

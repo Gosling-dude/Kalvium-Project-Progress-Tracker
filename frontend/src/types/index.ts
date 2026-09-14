@@ -59,7 +59,16 @@ export interface Student {
   growthCoach?: { id: string; name: string; email?: string } | null;
   currentCohort?: { id: string; name: string } | null;
   openFlagCount?: number;
+  // Only meaningful while currentTrack is A2 or B — the current deliverable
+  // set's assignment-email timestamp, combined deadline, and derived status
+  // (see backend deriveDeliverableSetStatus). Null/undefined otherwise, or
+  // before a set has been emailed.
+  deliverableEmailSentAt?: string | null;
+  deliverableDeadline?: string | null;
+  deliverableSetStatus?: DeliverableSetStatus | null;
 }
+
+export type DeliverableSetStatus = "NO_DELIVERABLES" | "DRAFT" | "ON_TRACK" | "OVERDUE" | "ALL_SUBMITTED" | "COMPLETED";
 
 export interface User {
   id: string;

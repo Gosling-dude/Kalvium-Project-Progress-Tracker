@@ -1,11 +1,33 @@
 # Deployment
 
-**Status: not deployed.** This document is preparation for when the user
-wants to deploy — no hosting, database, or email provider has been
-provisioned in this session, and none of the steps below have been
-executed against a real environment. Per the working agreement, actual
-deployment only happens once the user explicitly provides the credentials
-below and asks for it.
+**Status: prepped for Render (backend) + Vercel (frontend) + Neon (Postgres), not yet deployed.**
+Everything below has been written, built, and type-checked in this session,
+and the Postgres migration was generated and validated without a live
+database (`prisma migrate diff --from-empty`, then `prisma validate`) — but
+none of it has been run against a real Render/Vercel/Neon environment yet.
+Treat the first real deploy as the actual verification step, not this
+document.
+
+## Why there are two Prisma schemas
+
+- `backend/prisma/schema.prisma` — SQLite. Used for local dev and the test
+  suite. Zero setup, nothing to provision.
+- `backend/prisma/postgres/schema.prisma` — PostgreSQL (Neon in production),
+  with its own `migrations/` folder alongside it.
+
+Prisma's `datasource` `provider` must be a literal string — it can't be
+switched per-environment inside one schema file — so production needs its
+own schema file. Everything else (every model, field, index) must stay
+identical between the two; run `npm run check:schema-parity` after editing
+either one (it fails loudly on drift). If you add a migration to one, add
+the equivalent migration to the other.
+
+One known, deliberate behavior difference the parity check can't catch:
+SQLite's `contains` filter is case-insensitive by default; Postgres's is
+not. `backend/src/domain/services/student.service.ts`'s student search
+(`fullName`/`email`/`chosenProject`) is flagged with a comment there — add
+`mode: "insensitive"` to those three filters when you cut over to Postgres,
+to keep the search behaving the same way for users.
 
 ## Environment variables
 
@@ -13,91 +35,124 @@ below and asks for it.
 
 | Variable | Required in prod | Notes |
 |---|---|---|
-| `DATABASE_URL` | Yes | `file:./dev.db` locally. For production, a PostgreSQL connection string — see "Switching to PostgreSQL" below. |
-| `JWT_SECRET` | Yes | Must be a long random value in production — the checked-in default is explicitly labeled dev-only and insecure. |
+| `DATABASE_URL` | Yes | Neon's **pooled** connection string (`...-pooler.neon.tech/...?sslmode=require`). The app's runtime queries use this. |
+| `DIRECT_DATABASE_URL` | Yes (Postgres only) | Neon's **unpooled** connection string. Migrations (`prisma migrate deploy`) run against this — Neon's pooler doesn't support the DDL/session behavior migrations need. |
+| `JWT_SECRET` | Yes | Long random value — generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`. The app **refuses to start** in production if this is missing or is the checked-in dev default (see `src/config/env.ts`). |
 | `JWT_EXPIRES_IN` | No | Default `12h`. |
-| `COOKIE_NAME` | No | Default `kalvium_session`. |
-| `PORT` | No | Default `4000`. |
-| `NODE_ENV` | Yes | `production` in prod — disables pretty-printed logs, tightens cookie `secure` flag. |
-| `CORS_ORIGIN` | Yes | Must be set to the deployed frontend's exact origin in production. |
+| `COOKIE_NAME` | No | Default `kalvium_session`. Note: the frontend actually authenticates via a Bearer token in `Authorization` (stored in localStorage), not this cookie — it's a secondary fallback path (see `requireAuth`). |
+| `PORT` | No | Default `4000`. Render sets this itself; leave it alone if using the included `render.yaml`. |
+| `NODE_ENV` | Yes | `production` in prod — disables pretty-printed logs, sets cookies `Secure`+`SameSite=None` (needed since Vercel and Render are different origins), and enables the startup checks above. |
+| `CORS_ORIGIN` | Yes | The deployed frontend's exact origin(s). Comma-separated if more than one (e.g. production domain + a Vercel preview URL). No wildcard support — an unlisted origin gets a clean `403`. |
 | `EMAIL_MODE` | Yes | `mock` until an SMTP provider is verified — see `docs/EMAIL_SYSTEM.md`. Never default to `smtp` without testing against a real mailbox first. |
 | `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Only if `EMAIL_MODE=smtp` | |
-| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Only for seeding | Change the password immediately after first login in any shared environment; the seed script only sets it if the user doesn't already exist (`upsert` with `update: {}`), so re-running seed never resets a changed password. |
+| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Only for seeding | Change the password immediately after first login in any shared environment. The seed script only sets it if the user doesn't already exist (`upsert` with `update: {}`), so re-running seed never resets a changed password. `prisma/seed.ts` also refuses to insert its fake demo students/cohorts when `NODE_ENV=production`. |
 
 ### Frontend (`frontend/.env`, see `frontend/.env.example`)
 
 | Variable | Notes |
 |---|---|
-| `VITE_API_URL` | Defaults to `/api` (works with the same-origin proxy setup in `vite.config.ts` for dev). In production, point this at the deployed API's base URL if the frontend and backend are on different origins, and make sure `CORS_ORIGIN` on the backend matches. |
+| `VITE_API_URL` | Defaults to `/api` (works with the same-origin dev proxy in `vite.config.ts`). In production, set this to the deployed backend's full URL (e.g. `https://your-backend.onrender.com/api`) — Vercel and Render are different origins, so this can't be relative. Set it as a Vercel project env var (`vite build` inlines it at build time). |
 
-## Build & start
+## Deploying
+
+### 1. Neon (Postgres)
+
+1. Create a Neon project and database.
+2. Copy both connection strings from the Neon dashboard: the **pooled** one
+   (has `-pooler` in the hostname) → `DATABASE_URL`, and the **direct**
+   one → `DIRECT_DATABASE_URL`. Both need `?sslmode=require`.
+3. Nothing else to do here — the first Render deploy runs the migration
+   (see `render.yaml`'s build command).
+
+### 2. Render (backend)
+
+The included `render.yaml` (repo root) is a Blueprint — in the Render
+dashboard, "New +" → "Blueprint", point it at this repo, and it reads the
+file automatically. It will prompt for every variable marked `sync: false`
+(the two Neon URLs, `CORS_ORIGIN`, email settings, seed admin credentials);
+`JWT_SECRET` is auto-generated.
+
+Without the blueprint, configure a Web Service manually with:
+- Root directory: `backend`
+- Build command: `npm ci && npm run build:postgres` (runs the schema-parity
+  check, generates the Postgres Prisma client, applies migrations via
+  `DIRECT_DATABASE_URL`, then compiles TypeScript)
+- Start command: `npm start`
+- Health check path: `/health`
+
+After the first deploy, run the one-off seed command from the Render shell
+(or a Render Job) to create the bootstrap admin and baseline reference data
+(rubric, video question bank, email templates):
+```bash
+npx prisma db execute --schema prisma/postgres/schema.prisma --stdin <<< "select 1" # sanity check connectivity
+npm run seed
+```
+(`seed` uses whatever `@prisma/client` is currently generated — which the
+build command already pointed at Postgres — so no extra flags needed.)
+
+### 3. Vercel (frontend)
+
+- Root directory: `frontend` (this repo is a monorepo; set this in the
+  Vercel project's General settings).
+- Framework preset: Vite (auto-detected). `frontend/vercel.json` sets the
+  build command, output directory, the SPA rewrite (React Router needs
+  every path to fall through to `index.html`, or a refresh on `/students/x`
+  404s), and long-lived caching for hashed asset filenames.
+- Env var: `VITE_API_URL` = your Render backend's URL + `/api`.
+- Once you know the Vercel URL (and any custom domain), set it as
+  `CORS_ORIGIN` on the Render backend and redeploy the backend — the two
+  are circularly dependent on first deploy, which is normal.
+
+## Local build & start (for reference / non-Render hosts)
 
 ```bash
-# Backend
+# Backend — SQLite (dev)
 cd backend
 npm ci
-npx prisma migrate deploy   # applies migrations without prompting; safe for CI/CD
-npm run build               # tsc -> dist/
-npm start                   # node dist/server.js
+npx prisma migrate deploy
+npm run build
+npm start
+
+# Backend — Postgres (prod-equivalent)
+cd backend
+npm ci
+npm run build:postgres   # schema-parity check + generate + migrate deploy + tsc, all against Postgres
+npm start
 
 # Frontend
 cd frontend
 npm ci
-npm run build                # -> dist/, serve as static files behind any web server/CDN
+npm run build             # -> dist/, serve as static files behind any web server/CDN
 ```
 
 ## Health check
 
 `GET /health` (unauthenticated) returns `{ status: "ok", uptime }`. Point
-your platform's health check / load balancer probe at this.
-
-## Switching to PostgreSQL for production
-
-The schema was deliberately designed to make this a small, mechanical
-change (see `docs/ARCHITECTURE.md`):
-
-1. In `backend/prisma/schema.prisma`, change:
-   ```prisma
-   datasource db {
-     provider = "postgresql"   // was "sqlite"
-     url      = env("DATABASE_URL")
-   }
-   ```
-2. Set `DATABASE_URL` to a real PostgreSQL connection string.
-3. Delete `backend/prisma/migrations/` and regenerate a fresh initial
-   migration against Postgres (`npx prisma migrate dev --name init`) —
-   SQLite and PostgreSQL migration SQL are not interchangeable, so the
-   existing SQLite migration history cannot be replayed as-is against
-   Postgres. Because every "enum" is already a validated `String` column
-   (not a native SQLite feature), no field types need to change.
-4. Re-run `npm run seed`.
-
-**This has not been executed or tested in this session** — treat step 3 as
-the one part of this migration that needs verification (run it against a
-disposable database first) rather than assuming it will apply cleanly.
+your platform's health check / load balancer probe at this — `render.yaml`
+already does.
 
 ## Security checklist before going live
 
-- [ ] `JWT_SECRET` is a real random secret, not the dev default.
+- [x] `JWT_SECRET` missing or left at the dev default now makes the app **refuse to start** in production (`src/config/env.ts`) — nothing to double-check manually, just don't skip setting it.
 - [ ] `SEED_ADMIN_PASSWORD` has been changed from the default after first login.
-- [ ] `CORS_ORIGIN` is the exact deployed frontend origin (not `*`).
-- [ ] `NODE_ENV=production`.
+- [x] `CORS_ORIGIN` unlisted origins get a clean `403`, never a wildcard-allow (`src/app.ts`).
+- [ ] `NODE_ENV=production` is actually set (Render sets this by default for web services, but confirm).
 - [ ] `EMAIL_MODE=smtp` only after sending a real test email to a disposable inbox and confirming `EmailDeliveryAttempt` rows show `SENT`.
-- [ ] No `.env` file is committed (already gitignored).
-- [ ] The database file/connection string is not publicly readable.
-- [ ] Rate limiting (`express-rate-limit`, already applied to `/api/auth/login` and `/api` generally) is appropriate for expected traffic — tune `windowMs`/`limit` in `backend/src/app.ts` if needed.
-- [ ] If deployed behind a reverse proxy/load balancer, set `app.set("trust proxy", ...)` in `backend/src/app.ts` (currently unset) so `express-rate-limit` keys on the real client IP instead of the proxy's — otherwise all traffic looks like one client and either everyone gets rate-limited together or the limiter is ineffective.
+- [x] No `.env` file is committed (gitignored at the repo root).
+- [ ] Neon connection strings are the ones with `?sslmode=require`, and not shared outside the Render service's env vars.
+- [x] Rate limiting (`express-rate-limit`) applied to `/api/auth/login` (20/15min) and `/api` generally (300/min) — tune in `backend/src/app.ts` if traffic patterns need it.
+- [x] `app.set("trust proxy", 1)` is set (`src/app.ts`) — `express-rate-limit` now keys on the real client IP behind Render's proxy, not the proxy's own IP.
+- [x] Auth cookie is `Secure` + `SameSite=None` in production (`src/routes/auth.routes.ts`) — correct for Render/Vercel being different origins. (Not load-bearing for the app's actual auth, which uses a Bearer token — see the note under `COOKIE_NAME` above — but kept correct regardless.)
+- [x] Graceful shutdown on `SIGTERM`/`SIGINT` (`src/server.ts`) — in-flight requests finish and the DB pool closes cleanly on every Render deploy/restart, instead of being cut off mid-response.
+- [ ] `prisma/postgres/schema.prisma` and `prisma/schema.prisma` still match (`npm run check:schema-parity`) — re-run after any schema change.
+- [ ] The `mode: "insensitive"` search fix (see "Why there are two Prisma schemas" above) has been applied to `student.service.ts` once actually running on Postgres.
 
-## What to hand over when ready to deploy
+## What's still genuinely untested
 
-When the user is ready to actually deploy, they will need to provide (and
-only at that point should these be requested, per the working agreement):
-
-1. A hosting target for the backend (and whether the frontend is served
-   from the same host, a static host/CDN, or split).
-2. A production PostgreSQL connection string (or confirmation SQLite is
-   acceptable for a low-traffic deployment — note SQLite on most PaaS
-   platforms loses data on redeploy unless a persistent volume is
-   attached).
-3. Real SMTP credentials, only once ready to move off `EMAIL_MODE=mock`.
-4. The exact production frontend origin, for `CORS_ORIGIN`.
+Everything above was written and validated as far as possible without a
+live Postgres connection (schema validation, DB-less migration generation,
+full local test suite against SQLite, manual CORS/cookie/shutdown checks
+against the running dev server). The one thing that can only be verified
+against the real Neon database is: **does `npm run build:postgres` apply
+the generated migration cleanly?** Recommend doing that once, watching the
+Render build log, before pointing real users at it.

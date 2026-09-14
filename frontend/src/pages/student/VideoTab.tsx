@@ -54,10 +54,12 @@ export function VideoTab({ student, assignments, onChanged }: { student: Student
       {!latest || latest.finalizedAt ? (
         student.currentTrack === "A" && (
           <div className="surface flex flex-col items-center gap-3 px-6 py-10 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-violet-50 to-violet-100 text-violet-600 ring-1 ring-inset ring-violet-200/70">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-violet-50 to-violet-100 text-violet-600 ring-1 ring-inset ring-violet-200/70 dark:from-violet-500/15 dark:to-violet-500/10 dark:text-violet-400 dark:ring-violet-500/30">
               <Icon name="video" size={22} />
             </span>
-            <p className="text-sm text-slate-600">{latest ? "Assign a new video question set." : "No video questions assigned yet."}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              {latest ? "Assign a new video question set." : "No video questions assigned yet."}
+            </p>
             <Button icon="plus" onClick={() => assignMutation.mutate()} loading={assignMutation.isPending}>
               Assign 10 Video Questions
             </Button>
@@ -69,35 +71,40 @@ export function VideoTab({ student, assignments, onChanged }: { student: Student
 
       {assignments.filter((a) => a.finalizedAt).length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-slate-700">History</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">History</h3>
           {assignments
             .filter((a) => a.finalizedAt)
             .map((a) => (
               <div key={a.id} className="surface p-3.5 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="flex items-center gap-2">
-                    <span className="text-base font-semibold tabular text-slate-900">{a.totalScore}/50</span>
-                    <span className="text-xs text-slate-400">{new Date(a.finalizedAt!).toLocaleDateString()}</span>
+                    <span className="text-base font-semibold tabular text-slate-900 dark:text-slate-100">{a.totalScore}/50</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      {new Date(a.finalizedAt!).toLocaleDateString()}
+                    </span>
                   </span>
                   <Badge tone={a.outcome === "A1" ? "success" : "warning"} dot>
                     {a.outcome}
                   </Badge>
                 </div>
-                <p className="mt-1 text-slate-600">{a.outcomeReason}</p>
+                <p className="mt-1 text-slate-600 dark:text-slate-400">{a.outcomeReason}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {[...a.evaluations]
                     .sort((x, y) => x.question.questionNumber - y.question.questionNumber)
                     .map((e) => (
-                      <div key={e.id} className="rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60">
+                      <div
+                        key={e.id}
+                        className="rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60 dark:bg-slate-800/40 dark:ring-slate-700"
+                      >
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-700">
+                          <span className="font-medium text-slate-700 dark:text-slate-300">
                             {e.question.questionNumber}. {e.question.title}
                           </span>
-                          <span className="font-semibold text-slate-800">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
                             {e.score ?? 0}/{e.question.marks}
                           </span>
                         </div>
-                        {e.notes && <p className="mt-0.5 text-xs text-slate-500">{e.notes}</p>}
+                        {e.notes && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{e.notes}</p>}
                       </div>
                     ))}
                 </div>
@@ -145,8 +152,8 @@ function VideoAssignmentPanel({ assignmentId, student, onChanged }: { assignment
   return (
     <div className="surface p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-100">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-100 dark:bg-violet-500/10 dark:text-violet-400 dark:ring-violet-500/30">
             <Icon name="video" size={13} />
           </span>
           Video Assessment
@@ -163,7 +170,7 @@ function VideoAssignmentPanel({ assignmentId, student, onChanged }: { assignment
       </div>
 
       {/* Review progress across the 10 questions. */}
-      <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
         <div
           className="h-full rounded-full bg-gradient-to-r from-violet-400 to-violet-500 transition-all duration-500 ease-smooth"
           style={{ width: `${(data.evaluatedCount / data.totalQuestions) * 100}%` }}
@@ -189,7 +196,7 @@ function VideoAssignmentPanel({ assignmentId, student, onChanged }: { assignment
       </div>
 
       {data.evaluatedCount === data.totalQuestions && (
-        <div className="mt-4 animate-fade-in border-t border-slate-100 pt-4">
+        <div className="mt-4 animate-fade-in border-t border-slate-100 pt-4 dark:border-slate-800">
           <Field label="Finalization reason" required>
             <Textarea
               rows={2}
@@ -241,12 +248,16 @@ function QuestionRow({
   return (
     <div
       className={`rounded-lg border p-3 transition-colors ${
-        evalRow.evaluated ? "border-emerald-200/70 bg-emerald-50/30" : "border-slate-200/70 hover:border-slate-300"
+        evalRow.evaluated
+          ? "border-emerald-200/70 bg-emerald-50/30 dark:border-emerald-500/30 dark:bg-emerald-500/5"
+          : "border-slate-200/70 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600"
       }`}
     >
       <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-        <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-800">
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-2xs text-slate-600">{evalRow.question.questionKey}</span>
+        <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-200">
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-2xs text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+            {evalRow.question.questionKey}
+          </span>
           {evalRow.question.title}
           {isMandatory && <Badge tone="info">Mandatory</Badge>}
         </span>
@@ -256,7 +267,7 @@ function QuestionRow({
           </Badge>
         )}
       </div>
-      <p className="mb-2.5 text-xs leading-relaxed text-slate-500">{evalRow.question.questionText}</p>
+      <p className="mb-2.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{evalRow.question.questionText}</p>
       <div className="flex flex-wrap items-center gap-2">
         <Input className="max-w-xs" placeholder="Submission link/reference" value={reference} onChange={(e) => setReference(e.target.value)} />
         <Button size="sm" variant="secondary" onClick={() => submitMutation.mutate()} loading={submitMutation.isPending} disabled={!reference}>

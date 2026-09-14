@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from "../../lib/errors";
 import { recordAuditEvent } from "./audit.service";
 import { enrollStudentInCohort } from "./cohort.service";
 import { deriveDisplayStatus } from "../../lib/displayStatus";
+import { deriveDeliverableSetStatus } from "./developmentTrack.service";
 import type { ProgramStatus, Track } from "../constants/enums";
 
 export interface StudentListFilters {
@@ -26,6 +27,10 @@ export async function listStudents(filters: StudentListFilters) {
 
   const where: Prisma.StudentWhereInput = {};
   if (filters.search) {
+    // SQLite's `contains` is case-insensitive by default. Postgres's is NOT —
+    // when cutting over to prisma/schema.postgres.prisma (see DEPLOYMENT.md),
+    // add `mode: "insensitive"` to each of these three filters to keep this
+    // search behaving the same way in production.
     where.OR = [
       { fullName: { contains: filters.search } },
       { email: { contains: filters.search } },
@@ -67,16 +72,20 @@ export async function listStudents(filters: StudentListFilters) {
         growthCoach: { select: { id: true, name: true } },
         cohortEnrollments: { where: { isActive: true }, include: { cohort: true }, take: 1 },
         _count: { select: { flags: { where: { status: "OPEN" } } } },
+        // Only used to derive deliverableSetStatus below — not returned as
+        // its own field, so the list payload stays lean.
+        deliverableAssignments: { select: { track: true, status: true } },
       },
     }),
   ]);
 
   return {
-    data: students.map((s) => ({
+    data: students.map(({ deliverableAssignments, ...s }) => ({
       ...s,
       currentCohort: s.cohortEnrollments[0]?.cohort ?? null,
       openFlagCount: s._count.flags,
       displayStatus: deriveDisplayStatus(s),
+      deliverableSetStatus: deriveDeliverableSetStatus(s, deliverableAssignments),
     })),
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   };
@@ -226,8 +235,15 @@ export async function getStudentSummary(id: string) {
       growthCoach: true,
       cohortEnrollments: { where: { isActive: true }, include: { cohort: true }, take: 1 },
       flags: { where: { status: "OPEN" } },
+      deliverableAssignments: { select: { track: true, status: true } },
     },
   });
   if (!student) throw new NotFoundError("Student", id);
-  return { ...student, currentCohort: student.cohortEnrollments[0]?.cohort ?? null, displayStatus: deriveDisplayStatus(student) };
+  const { deliverableAssignments, ...rest } = student;
+  return {
+    ...rest,
+    currentCohort: rest.cohortEnrollments[0]?.cohort ?? null,
+    displayStatus: deriveDisplayStatus(rest),
+    deliverableSetStatus: deriveDeliverableSetStatus(rest, deliverableAssignments),
+  };
 }

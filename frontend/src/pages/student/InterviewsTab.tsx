@@ -59,7 +59,7 @@ export function InterviewsTab({ student, interviews, onChanged }: { student: Stu
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         {interviews.length > 0 ? (
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
             Interviews
             <Badge tone="neutral">{interviews.length} of 2</Badge>
           </h3>
@@ -194,13 +194,15 @@ function InterviewCard({ student, interview, onChanged }: { student: Student; in
   return (
     <div className="surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2.5 text-sm font-medium text-slate-900">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-2xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-100">
+        <span className="flex min-w-0 items-center gap-2.5 text-sm font-medium text-slate-900 dark:text-slate-100">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-2xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/30">
             #{interview.sequenceNumber}
           </span>
           <span className="truncate">
             {interview.interviewType}
-            {interview.interviewer && <span className="font-normal text-slate-500"> · {interview.interviewer.name}</span>}
+            {interview.interviewer && (
+              <span className="font-normal text-slate-500 dark:text-slate-400"> · {interview.interviewer.name}</span>
+            )}
           </span>
         </span>
         <div className="flex shrink-0 items-center gap-2">
@@ -215,25 +217,27 @@ function InterviewCard({ student, interview, onChanged }: { student: Student; in
         </div>
       </div>
       {interview.scheduledStart && (
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500">
-          <Icon name="calendar" size={12} className="text-slate-400" />
+        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <Icon name="calendar" size={12} className="text-slate-400 dark:text-slate-500" />
           <time dateTime={interview.scheduledStart}>{new Date(interview.scheduledStart).toLocaleString()}</time>
         </p>
       )}
 
       {interview.evaluation && !editing ? (
-        <div className="mt-2 rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60 text-sm">
+        <div className="mt-2 rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60 text-sm dark:bg-slate-800/40 dark:ring-slate-700">
           <p>
             Highest rung held: {RUNGS.find((r) => r.level === interview.evaluation!.highestRungHeld)?.label ?? "—"}
             {interview.evaluation.breakRung ? ` · Broke at R${interview.evaluation.breakRung}` : ""}
             {interview.evaluation.result && ` · ${interview.evaluation.result}`}
           </p>
           {interview.evaluation.breakCauseCategory && (
-            <p className="text-slate-500">Break cause: {BREAK_CAUSES.find((b) => b.value === interview.evaluation!.breakCauseCategory)?.label}</p>
+            <p className="text-slate-500 dark:text-slate-400">
+              Break cause: {BREAK_CAUSES.find((b) => b.value === interview.evaluation!.breakCauseCategory)?.label}
+            </p>
           )}
-          <p className="text-slate-600">{interview.evaluation.overallFeedback}</p>
+          <p className="text-slate-600 dark:text-slate-400">{interview.evaluation.overallFeedback}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <button className="text-xs text-brand-600 hover:underline" onClick={() => setEditing(true)}>
+            <button className="text-xs text-brand-600 hover:underline dark:text-brand-400" onClick={() => setEditing(true)}>
               Edit
             </button>
             <EmailComposer
@@ -248,7 +252,7 @@ function InterviewCard({ student, interview, onChanged }: { student: Student; in
           </div>
         </div>
       ) : (
-        <div className="mt-2 space-y-2 border-t border-slate-100 pt-2">
+        <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-slate-800">
           {error && <ErrorBanner message={error} />}
           <div className="flex flex-wrap gap-3">
             <Field label="Highest rung held (1-4)">

@@ -75,7 +75,7 @@ export function StudentDetailPage() {
                   ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
                   : s.currentTrack === "A"
                     ? "bg-gradient-to-r from-blue-400 to-blue-500"
-                    : "bg-slate-200"
+                    : "bg-slate-200 dark:bg-slate-700"
           }`}
         />
         <div className="p-4 sm:p-5">
@@ -85,10 +85,10 @@ export function StudentDetailPage() {
                 {initials}
               </span>
               <div className="min-w-0">
-                <h1 className="truncate text-2xl font-bold text-slate-900">{s.fullName}</h1>
+                <h1 className="truncate text-2xl font-bold text-slate-900 dark:text-slate-100">{s.fullName}</h1>
                 <a
                   href={`mailto:${s.email}`}
-                  className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-brand-700"
+                  className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-400"
                 >
                   <Icon name="mail" size={13} />
                   <span className="truncate">{s.email}</span>
@@ -119,15 +119,15 @@ export function StudentDetailPage() {
             <button
               type="button"
               onClick={() => setTab("Flags")}
-              className="mt-4 flex w-full items-center gap-2.5 rounded-lg bg-rose-50 px-3 py-2.5 text-left ring-1 ring-inset ring-rose-200 transition-colors hover:bg-rose-100"
+              className="mt-4 flex w-full items-center gap-2.5 rounded-lg bg-rose-50 px-3 py-2.5 text-left ring-1 ring-inset ring-rose-200 transition-colors hover:bg-rose-100 dark:bg-rose-500/10 dark:ring-rose-500/30 dark:hover:bg-rose-500/20"
             >
-              <Icon name="flag" size={15} className="shrink-0 text-rose-500" />
+              <Icon name="flag" size={15} className="shrink-0 text-rose-500 dark:text-rose-400" />
               <span className="flex flex-wrap items-center gap-1.5">
                 {openFlags.map((f: { id: string; severity: string; title: string }) => (
                   <SeverityBadge key={f.id} severity={f.severity} />
                 ))}
               </span>
-              <span className="ml-auto flex shrink-0 items-center gap-1 text-xs font-semibold text-rose-700">
+              <span className="ml-auto flex shrink-0 items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-400">
                 {openFlags.length} open flag{openFlags.length > 1 ? "s" : ""}
                 <Icon name="chevronRight" size={13} />
               </span>
@@ -194,7 +194,7 @@ function DeleteStudentModal({
     <Modal open onClose={onClose} title="Delete Student">
       <div className="space-y-3">
         {error && <ErrorBanner message={error} />}
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-slate-700 dark:text-slate-300">
           This permanently deletes <strong>{student.fullName}</strong> and everything tied to them — cohort history, project/resume
           reviews, video and interview evaluations, deliverables, flags, growth coach evaluations, graduation decisions, and
           email history. This cannot be undone.
@@ -202,7 +202,7 @@ function DeleteStudentModal({
         <Field label={`Type "${student.fullName}" to confirm`}>
           <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoFocus placeholder={student.fullName} />
         </Field>
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>

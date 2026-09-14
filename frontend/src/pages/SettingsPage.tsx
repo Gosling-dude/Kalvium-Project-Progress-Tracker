@@ -26,7 +26,9 @@ import { Badge } from "../components/ui/Badge";
 import { Card, CardHeader, CardBody } from "../components/ui/Card";
 import { PageContainer, PageHeader } from "../components/ui/Page";
 import { Icon, IconName } from "../components/ui/Icon";
+import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { apiErrorMessage } from "../lib/api";
+import { useTheme } from "../lib/theme";
 
 export function SettingsPage() {
   const { user } = useAuth();
@@ -47,6 +49,7 @@ export function SettingsPage() {
         title="Settings"
         description="Accounts, reference data, policy versions, and data import/export."
       />
+      <AppearanceSection />
       <ProgramAdminsSection />
       <CampusesSection />
       <GrowthCoachesSection />
@@ -82,13 +85,15 @@ function EntityRow({
     <div className="flex items-center gap-3 py-2.5">
       <span
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 ring-inset ${
-          active ? "bg-slate-100 text-slate-500 ring-slate-200" : "bg-amber-50 text-amber-600 ring-amber-100"
+          active
+            ? "bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
+            : "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/30"
         }`}
       >
         <Icon name={icon} size={15} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 truncate text-sm font-medium text-slate-900">
+        <p className="flex items-center gap-2 truncate text-sm font-medium text-slate-900 dark:text-slate-100">
           {title}
           {!active && (
             <Badge tone="warning" dot>
@@ -96,11 +101,11 @@ function EntityRow({
             </Badge>
           )}
         </p>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 truncate text-xs text-slate-500">
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 truncate text-xs text-slate-500 dark:text-slate-400">
           {subtitle && <span className="truncate">{subtitle}</span>}
           {facts?.map((f) => (
             <span key={f} className="flex items-center gap-2">
-              <span className="text-slate-300">·</span>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
               {f}
             </span>
           ))}
@@ -112,6 +117,26 @@ function EntityRow({
         </Button>
       )}
     </div>
+  );
+}
+
+function AppearanceSection() {
+  const { theme } = useTheme();
+  return (
+    <Card>
+      <CardHeader icon="sun" title="Appearance" subtitle="Choose how the tracker looks on this device." />
+      <CardBody>
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50/70 p-3 ring-1 ring-inset ring-slate-200/70 dark:bg-slate-800/40 dark:ring-slate-700">
+          <div>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Dark mode</p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              {theme === "dark" ? "Dark theme is on." : "Light theme is on."} Applies across the whole app on this browser.
+            </p>
+          </div>
+          <ThemeToggle />
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
@@ -150,7 +175,7 @@ function ProgramAdminsSection() {
       />
       <CardBody className="space-y-4">
         {admins && admins.length > 0 && (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {admins.map((a) => (
               <EntityRow
                 key={a.id}
@@ -165,7 +190,7 @@ function ProgramAdminsSection() {
           </div>
         )}
         {error && <ErrorBanner message={error} />}
-        <div className="flex flex-wrap items-end gap-3 rounded-lg bg-slate-50/70 p-3 ring-1 ring-inset ring-slate-200/70">
+        <div className="flex flex-wrap items-end gap-3 rounded-lg bg-slate-50/70 p-3 ring-1 ring-inset ring-slate-200/70 dark:bg-slate-800/40 dark:ring-slate-700">
           <Field label="Name">
             <Input className="w-44" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
@@ -223,7 +248,7 @@ function CampusesSection() {
             ))}
           </div>
         )}
-        <div className="flex flex-wrap items-end gap-3 rounded-lg bg-slate-50/70 p-3 ring-1 ring-inset ring-slate-200/70">
+        <div className="flex flex-wrap items-end gap-3 rounded-lg bg-slate-50/70 p-3 ring-1 ring-inset ring-slate-200/70 dark:bg-slate-800/40 dark:ring-slate-700">
           <Field label="Name">
             <Input className="w-48" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
@@ -280,7 +305,7 @@ function GrowthCoachesSection() {
       />
       <CardBody className="space-y-4">
         {coaches && coaches.length > 0 && (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {coaches.map((c) => (
               <EntityRow
                 key={c.id}
@@ -296,7 +321,7 @@ function GrowthCoachesSection() {
           </div>
         )}
         {error && <ErrorBanner message={error} />}
-        <div className="flex flex-wrap items-end gap-3 rounded-lg bg-slate-50/70 p-3 ring-1 ring-inset ring-slate-200/70">
+        <div className="flex flex-wrap items-end gap-3 rounded-lg bg-slate-50/70 p-3 ring-1 ring-inset ring-slate-200/70 dark:bg-slate-800/40 dark:ring-slate-700">
           <Field label="Name">
             <Input className="w-44" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
@@ -353,24 +378,54 @@ function RubricSection() {
               totalMax: number;
               threshold: number;
               active: boolean;
-              dimensions: { label: string; maxScore: number; mandatory: boolean; mandatoryMin: number | null }[];
+              dimensions: {
+                label: string;
+                maxScore: number;
+                mandatory: boolean;
+                mandatoryMin: number | null;
+                whatItEvaluates?: string;
+                lowBand?: string;
+                midBand?: string;
+                highBand?: string;
+              }[];
             }) => (
-              <div key={v.id} className="rounded-lg border border-slate-200/80 bg-slate-50/50 p-3">
+              <div key={v.id} className="rounded-lg border border-slate-200/80 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/40">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-slate-900">{v.key}</span>
+                  <span className="font-medium text-slate-900 dark:text-slate-100">{v.key}</span>
                   <Badge tone={v.active ? "success" : "neutral"} dot>
                     threshold {v.threshold}/{v.totalMax}
                   </Badge>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 sm:grid-cols-3">
+                <div className="mt-2 space-y-1.5">
                   {v.dimensions.map((d) => (
-                    <span key={d.label} className="flex items-center gap-1.5">
-                      <span className="h-1 w-1 shrink-0 rounded-full bg-slate-300" />
-                      <span className="truncate">
-                        {d.label}
-                        {d.mandatory && <span className="text-amber-600"> (min {d.mandatoryMin})</span>}
-                      </span>
-                    </span>
+                    <details key={d.label} className="group rounded border border-slate-200/70 bg-white/60 px-2 py-1.5 dark:border-slate-700/70 dark:bg-slate-900/30">
+                      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                        <Icon name="chevronRight" className="h-3 w-3 shrink-0 text-slate-400 transition-transform group-open:rotate-90" />
+                        <span className="font-medium text-slate-900 dark:text-slate-100">{d.label}</span>
+                        <span>· {d.maxScore} marks</span>
+                        {d.mandatory && <span className="text-amber-600 dark:text-amber-400">(min {d.mandatoryMin})</span>}
+                      </summary>
+                      {d.whatItEvaluates && (
+                        <div className="mt-2 space-y-1 pl-5 text-xs text-slate-600 dark:text-slate-400">
+                          <p>
+                            <span className="font-medium text-slate-700 dark:text-slate-300">What it evaluates: </span>
+                            {d.whatItEvaluates}
+                          </p>
+                          <p>
+                            <span className="font-medium text-slate-700 dark:text-slate-300">Low (0–1): </span>
+                            {d.lowBand}
+                          </p>
+                          <p>
+                            <span className="font-medium text-slate-700 dark:text-slate-300">Mid (2–3): </span>
+                            {d.midBand}
+                          </p>
+                          <p>
+                            <span className="font-medium text-slate-700 dark:text-slate-300">High (4–5): </span>
+                            {d.highBand}
+                          </p>
+                        </div>
+                      )}
+                    </details>
                   ))}
                 </div>
               </div>
@@ -397,17 +452,44 @@ function VideoQuestionSection() {
               id: string;
               questionSet: { name: string };
               versionNumber: number;
-              questions: { questionKey: string; title: string; isMandatory: boolean }[];
+              questions: {
+                questionKey: string;
+                title: string;
+                questionText: string;
+                marks: number;
+                minTimeSeconds: number;
+                listeningCriteria: string;
+                isMandatory: boolean;
+              }[];
             }) => (
-              <div key={v.id} className="rounded-lg border border-slate-200/80 bg-slate-50/50 p-3">
-                <span className="font-medium text-slate-900">
+              <div key={v.id} className="rounded-lg border border-slate-200/80 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+                <span className="font-medium text-slate-900 dark:text-slate-100">
                   {v.questionSet.name} v{v.versionNumber}
                 </span>
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="mt-2 space-y-1.5">
                   {v.questions.map((q) => (
-                    <Badge key={q.questionKey} tone={q.isMandatory ? "info" : "neutral"} title={q.title}>
-                      {q.questionKey}: {q.title}
-                    </Badge>
+                    <details key={q.questionKey} className="group rounded border border-slate-200/70 bg-white/60 px-2 py-1.5 dark:border-slate-700/70 dark:bg-slate-900/30">
+                      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                        <Icon name="chevronRight" className="h-3 w-3 shrink-0 text-slate-400 transition-transform group-open:rotate-90" />
+                        <span className="font-medium text-slate-900 dark:text-slate-100">
+                          {q.questionKey}: {q.title}
+                        </span>
+                        <span>
+                          · {q.marks} marks · min {Math.round(q.minTimeSeconds / 60)} min
+                        </span>
+                        {q.isMandatory && <span className="text-amber-600 dark:text-amber-400">(mandatory, min 3)</span>}
+                      </summary>
+                      <div className="mt-2 space-y-1 pl-5 text-xs text-slate-600 dark:text-slate-400">
+                        <p>
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Question: </span>
+                          {q.questionText}
+                        </p>
+                        <p>
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Expectations (what we're listening for): </span>
+                          {q.listeningCriteria}
+                        </p>
+                      </div>
+                    </details>
                   ))}
                 </div>
               </div>
@@ -458,7 +540,7 @@ function ImportSection() {
       <CardHeader icon="upload" title="Bulk Upload Students (CSV/XLSX)" subtitle="Validated before anything is written." />
       <CardBody className="space-y-4">
         {error && <ErrorBanner message={error} />}
-        <p className="text-xs leading-relaxed text-slate-500">
+        <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
           Recognized columns include email, full name, campus, growth coach (name and/or "Growth Coach Email"), batch/year, chosen
           project, and a resume Google Drive link (any of "Resume Link", "Resume Google Drive Link", "Resume"). A campus or growth coach
           that isn't already in the system is added automatically (marked inactive) rather than left blank — review it here afterward.
@@ -474,14 +556,14 @@ function ImportSection() {
             ))}
           </Select>
         </Field>
-        <label className="group flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-4 py-7 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/40">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-400 shadow-xs ring-1 ring-inset ring-slate-200 transition-colors group-hover:text-brand-600 group-hover:ring-brand-200">
+        <label className="group flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-4 py-7 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:border-brand-500 dark:hover:bg-brand-500/10">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-400 shadow-xs ring-1 ring-inset ring-slate-200 transition-colors group-hover:text-brand-600 group-hover:ring-brand-200 dark:bg-slate-800 dark:text-slate-500 dark:ring-slate-700 dark:group-hover:text-brand-400 dark:group-hover:ring-brand-500/30">
             <Icon name="upload" size={18} />
           </span>
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             {previewMutation.isPending ? "Reading file…" : "Choose a CSV or XLSX file"}
           </span>
-          <span className="text-xs text-slate-500">Nothing is saved until you commit the preview.</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Nothing is saved until you commit the preview.</span>
           <input
             ref={fileRef}
             type="file"
@@ -496,7 +578,7 @@ function ImportSection() {
           />
         </label>
         {preview && (
-          <div className="animate-fade-in space-y-3 rounded-lg border border-slate-200 p-3">
+          <div className="animate-fade-in space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="success" dot>
                 {preview.validRows.length} of {preview.totalRows} rows valid
@@ -513,14 +595,14 @@ function ImportSection() {
               )}
             </div>
             {(preview.errors.length > 0 || preview.warnings.length > 0) && (
-              <div className="space-y-1 rounded-md bg-slate-50 p-2.5">
+              <div className="space-y-1 rounded-md bg-slate-50 p-2.5 dark:bg-slate-800/60">
                 {preview.errors.slice(0, 5).map((e, i) => (
-                  <p key={`e${i}`} className="text-xs text-rose-600">
+                  <p key={`e${i}`} className="text-xs text-rose-600 dark:text-rose-400">
                     <span className="font-semibold tabular">Row {e.rowNumber}:</span> {e.message}
                   </p>
                 ))}
                 {preview.warnings.slice(0, 5).map((w, i) => (
-                  <p key={`w${i}`} className="text-xs text-amber-700">
+                  <p key={`w${i}`} className="text-xs text-amber-700 dark:text-amber-400">
                     <span className="font-semibold tabular">Row {w.rowNumber}:</span> {w.message}
                   </p>
                 ))}
@@ -539,8 +621,8 @@ function ImportSection() {
         )}
         {result && (
           <div className="animate-fade-in space-y-2">
-            <div className="flex items-start gap-2.5 rounded-lg bg-emerald-50 p-3 text-sm leading-relaxed text-emerald-800 ring-1 ring-inset ring-emerald-200">
-              <Icon name="checkCircle" size={16} className="mt-0.5 shrink-0 text-emerald-500" />
+            <div className="flex items-start gap-2.5 rounded-lg bg-emerald-50 p-3 text-sm leading-relaxed text-emerald-800 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30">
+              <Icon name="checkCircle" size={16} className="mt-0.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
               <span>
                 Imported {result.created} new student(s), {result.updatedExisting} existing record(s) filled in,{" "}
                 {result.skippedExisting} already on file with nothing new to add.
@@ -548,9 +630,9 @@ function ImportSection() {
               </span>
             </div>
             {result.warnings.length > 0 && (
-              <div className="space-y-1 rounded-lg bg-amber-50 p-3 ring-1 ring-inset ring-amber-200">
+              <div className="space-y-1 rounded-lg bg-amber-50 p-3 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/30">
                 {result.warnings.map((w, i) => (
-                  <p key={i} className="text-xs text-amber-800">
+                  <p key={i} className="text-xs text-amber-800 dark:text-amber-300">
                     <span className="font-semibold tabular">Row {w.rowNumber}:</span> {w.message}
                   </p>
                 ))}
@@ -581,13 +663,13 @@ function ExportSection() {
               key={x.path}
               type="button"
               onClick={() => downloadExport(x.path, { format: "csv" }, x.file)}
-              className="group flex flex-col items-center gap-2 rounded-lg border border-slate-200/80 bg-white px-3 py-4 text-center shadow-xs transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
+              className="group flex flex-col items-center gap-2 rounded-lg border border-slate-200/80 bg-white px-3 py-4 text-center shadow-xs transition-all duration-200 ease-smooth hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-500/50"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-200 transition-colors group-hover:bg-brand-50 group-hover:text-brand-600 group-hover:ring-brand-100">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-200 transition-colors group-hover:bg-brand-50 group-hover:text-brand-600 group-hover:ring-brand-100 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700 dark:group-hover:bg-brand-500/10 dark:group-hover:text-brand-400 dark:group-hover:ring-brand-500/30">
                 <Icon name={x.icon} size={17} />
               </span>
-              <span className="text-sm font-medium text-slate-800">{x.label}</span>
-              <span className="text-2xs uppercase tracking-wider text-slate-400">CSV</span>
+              <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{x.label}</span>
+              <span className="text-2xs uppercase tracking-wider text-slate-400 dark:text-slate-500">CSV</span>
             </button>
           ))}
         </div>

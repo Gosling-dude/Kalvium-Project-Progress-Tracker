@@ -75,7 +75,7 @@ export function TasksPage() {
                 header: "Item",
                 className: "max-w-[220px] truncate",
                 render: (t) => (
-                  <span className="font-medium text-slate-900" title={t.title}>
+                  <span className="font-medium text-slate-900 dark:text-slate-100" title={t.title}>
                     {t.title}
                   </span>
                 ),
@@ -93,7 +93,7 @@ export function TasksPage() {
               {
                 header: "When",
                 render: (t) => (
-                  <time className="text-xs text-slate-500" dateTime={t.at}>
+                  <time className="text-xs text-slate-500 dark:text-slate-400" dateTime={t.at}>
                     {new Date(t.at).toLocaleString()}
                   </time>
                 ),

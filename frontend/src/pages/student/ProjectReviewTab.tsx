@@ -61,7 +61,7 @@ export function ProjectReviewTab({ student, reviews, onChanged }: { student: Stu
         <ReviewForm review={draft} dimensions={rubric?.dimensions ?? []} onChanged={onChanged} />
       ) : (
         <div className="surface p-4 text-center">
-          <p className="mb-3 text-sm text-slate-600">No review in progress.</p>
+          <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">No review in progress.</p>
           <Button onClick={() => startMutation.mutate()} loading={startMutation.isPending} disabled={!rubric}>
             Start Project Review
           </Button>
@@ -70,26 +70,35 @@ export function ProjectReviewTab({ student, reviews, onChanged }: { student: Stu
 
       {completed.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-700">Past reviews</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Past reviews</h3>
           {completed.map((r) => (
             <div key={r.id} className="surface p-4">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                   {r.totalScore}/50 · {new Date(r.createdAt).toLocaleDateString()} · {r.reviewer?.name}
                 </span>
                 <Badge tone={r.outcome === "TRACK_A" ? "info" : "danger"}>{r.outcome?.replace("_", " ")}</Badge>
               </div>
-              <p className="text-sm text-slate-600">{r.outcomeReason}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{r.outcomeReason}</p>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {r.scores.map((s) => (
-                  <div key={s.dimensionKey} className="rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60">
+                  <div
+                    key={s.dimensionKey}
+                    className="rounded-lg bg-slate-50 p-2 ring-1 ring-inset ring-slate-200/60 dark:bg-slate-800/40 dark:ring-slate-700"
+                  >
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-slate-700">{s.dimensionLabel}</span>
-                      <span className={s.mandatoryPass === false ? "font-semibold text-rose-600" : "font-semibold text-slate-800"}>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">{s.dimensionLabel}</span>
+                      <span
+                        className={
+                          s.mandatoryPass === false
+                            ? "font-semibold text-rose-600 dark:text-rose-400"
+                            : "font-semibold text-slate-800 dark:text-slate-200"
+                        }
+                      >
                         {s.score}/{s.maxScore}
                       </span>
                     </div>
-                    {s.reason && <p className="mt-0.5 text-xs text-slate-500">{s.reason}</p>}
+                    {s.reason && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{s.reason}</p>}
                   </div>
                 ))}
               </div>
@@ -131,20 +140,24 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
   return (
     <div className="surface p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-slate-900">Project / Resume Review</h3>
-        <span className={`text-lg font-bold tabular ${wouldPass ? "text-emerald-600" : "text-rose-600"}`}>{total}/50</span>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Project / Resume Review</h3>
+        <span
+          className={`text-lg font-bold tabular ${wouldPass ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}
+        >
+          {total}/50
+        </span>
       </div>
 
       {/* Live score bar with the pass threshold marked, so the reviewer can see
           where this review stands relative to 25 without doing the arithmetic. */}
-      <div className="relative mb-4 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="relative mb-4 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
         <div
           className={`h-full rounded-full transition-all duration-300 ease-smooth ${
             wouldPass ? "bg-gradient-to-r from-emerald-400 to-emerald-500" : "bg-gradient-to-r from-rose-400 to-rose-500"
           }`}
           style={{ width: `${Math.min(100, (total / 50) * 100)}%` }}
         />
-        <span aria-hidden="true" className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-slate-400/70" />
+        <span aria-hidden="true" className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-slate-400/70 dark:bg-slate-500/60" />
       </div>
 
       {error && <div className="mb-3"><ErrorBanner message={error} /></div>}
@@ -156,13 +169,18 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
           return (
             <div
               className={`rounded-lg border p-3 transition-colors ${
-                fails ? "border-rose-200 bg-rose-50/40" : "border-slate-200/70 hover:border-slate-300"
+                fails
+                  ? "border-rose-200 bg-rose-50/40 dark:border-rose-500/30 dark:bg-rose-500/5"
+                  : "border-slate-200/70 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600"
               }`}
               key={d.key}
             >
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-medium text-slate-800">
-                  {d.label} {d.mandatory && <span className="text-xs text-slate-400">(min {d.mandatoryMin}+)</span>}
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  {d.label}{" "}
+                  {d.mandatory && (
+                    <span className="text-xs text-slate-400 dark:text-slate-500">(min {d.mandatoryMin}+)</span>
+                  )}
                 </span>
                 <div className="flex items-center gap-2">
                   {fails && <Badge tone="danger">Below minimum</Badge>}
@@ -177,7 +195,7 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
                       </option>
                     ))}
                   </Select>
-                  <span className="text-xs tabular text-slate-400">/ {d.maxScore}</span>
+                  <span className="text-xs tabular text-slate-400 dark:text-slate-500">/ {d.maxScore}</span>
                 </div>
               </div>
               <Textarea
@@ -193,23 +211,27 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
 
       <div
         className={`mt-4 rounded-lg p-3 text-sm ring-1 ring-inset ${
-          wouldPass ? "bg-emerald-50/60 ring-emerald-200/70" : "bg-rose-50/50 ring-rose-200/70"
+          wouldPass
+            ? "bg-emerald-50/60 ring-emerald-200/70 dark:bg-emerald-500/10 dark:ring-emerald-500/30"
+            : "bg-rose-50/50 ring-rose-200/70 dark:bg-rose-500/10 dark:ring-rose-500/30"
         }`}
       >
-        <p className="text-slate-700">
+        <p className="text-slate-700 dark:text-slate-300">
           Total: <strong className="tabular">{total}/50</strong> (threshold 25) — Mandatory minimums:{" "}
           {mandatoryFailures.length === 0 ? (
-            <span className="font-medium text-emerald-700">all pass</span>
+            <span className="font-medium text-emerald-700 dark:text-emerald-400">all pass</span>
           ) : (
-            <span className="font-medium text-rose-700">{mandatoryFailures.map((d) => d.label).join(", ")} below minimum</span>
+            <span className="font-medium text-rose-700 dark:text-rose-400">
+              {mandatoryFailures.map((d) => d.label).join(", ")} below minimum
+            </span>
           )}
         </p>
-        <p className="mt-1.5 flex items-center gap-1.5 font-medium text-slate-900">
+        <p className="mt-1.5 flex items-center gap-1.5 font-medium text-slate-900 dark:text-slate-100">
           Projected outcome:
           <Badge tone={wouldPass ? "info" : "danger"} dot>
             {wouldPass ? "Track A" : "Track B"}
           </Badge>
-          <span className="text-xs font-normal text-slate-500">(calculated server-side on completion)</span>
+          <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(calculated server-side on completion)</span>
         </p>
       </div>
 
@@ -224,7 +246,7 @@ function ReviewForm({ review, dimensions, onChanged }: { review: ProjectReview; 
         </Field>
       </div>
 
-      <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+      <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
         <Button variant="secondary" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
           Save Draft
         </Button>

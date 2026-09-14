@@ -3,16 +3,16 @@ import { ReactNode } from "react";
 type Tone = "neutral" | "success" | "warning" | "danger" | "info" | "brand";
 
 const TONE_CLASSES: Record<Tone, string> = {
-  neutral: "bg-slate-50 text-slate-700 ring-slate-200",
-  success: "bg-emerald-50 text-emerald-700 ring-emerald-200/80",
-  warning: "bg-amber-50 text-amber-800 ring-amber-200/80",
-  danger: "bg-rose-50 text-rose-700 ring-rose-200/80",
-  info: "bg-blue-50 text-blue-700 ring-blue-200/80",
-  brand: "bg-brand-50 text-brand-700 ring-brand-200/80",
+  neutral: "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700",
+  success: "bg-emerald-50 text-emerald-700 ring-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/30",
+  warning: "bg-amber-50 text-amber-800 ring-amber-200/80 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/30",
+  danger: "bg-rose-50 text-rose-700 ring-rose-200/80 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/30",
+  info: "bg-blue-50 text-blue-700 ring-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/30",
+  brand: "bg-brand-50 text-brand-700 ring-brand-200/80 dark:bg-brand-500/10 dark:text-brand-300 dark:ring-brand-500/30",
 };
 
 const DOT_CLASSES: Record<Tone, string> = {
-  neutral: "bg-slate-400",
+  neutral: "bg-slate-400 dark:bg-slate-500",
   success: "bg-emerald-500",
   warning: "bg-amber-500",
   danger: "bg-rose-500",
@@ -71,6 +71,31 @@ export function ProgramStatusBadge({ status }: { status: string }) {
   return (
     <Badge tone={STATUS_TONE[status] ?? "neutral"} dot>
       {status.replace(/_/g, " ")}
+    </Badge>
+  );
+}
+
+const DELIVERABLE_SET_STATUS_TONE: Record<string, Tone> = {
+  NO_DELIVERABLES: "neutral",
+  DRAFT: "neutral",
+  ON_TRACK: "info",
+  ALL_SUBMITTED: "brand",
+  OVERDUE: "danger",
+  COMPLETED: "success",
+};
+const DELIVERABLE_SET_STATUS_LABEL: Record<string, string> = {
+  NO_DELIVERABLES: "No deliverables",
+  DRAFT: "Not yet sent",
+  ON_TRACK: "Within deadline",
+  ALL_SUBMITTED: "All submitted",
+  OVERDUE: "Overdue",
+  COMPLETED: "All verified",
+};
+export function DeliverableSetStatusBadge({ status }: { status: string | null | undefined }) {
+  if (!status) return <span className="text-slate-300 dark:text-slate-600">—</span>;
+  return (
+    <Badge tone={DELIVERABLE_SET_STATUS_TONE[status] ?? "neutral"} dot>
+      {DELIVERABLE_SET_STATUS_LABEL[status] ?? status}
     </Badge>
   );
 }

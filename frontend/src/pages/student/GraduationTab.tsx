@@ -65,8 +65,8 @@ export function GraduationTab({
     <div className="space-y-4">
       {student.currentTrack === "A1" && (
         <div className="surface p-4">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/30">
               <Icon name="graduation" size={13} />
             </span>
             Record Graduation Decision
@@ -91,8 +91,8 @@ export function GraduationTab({
                       key={i.id}
                       className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
                         checked
-                          ? "bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-200"
-                          : "bg-white text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+                          ? "bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-200 dark:bg-brand-500/10 dark:text-brand-300 dark:ring-brand-500/30"
+                          : "bg-white text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700 dark:hover:bg-slate-700"
                       }`}
                     >
                       <input
@@ -101,7 +101,7 @@ export function GraduationTab({
                         onChange={(e) =>
                           setSelectedInterviews((prev) => (e.target.checked ? [...prev, i.id] : prev.filter((id) => id !== i.id)))
                         }
-                        className="h-3.5 w-3.5 cursor-pointer rounded border-slate-300 text-brand-600 focus:ring-2 focus:ring-brand-500"
+                        className="h-3.5 w-3.5 cursor-pointer rounded border-slate-300 text-brand-600 focus:ring-2 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-800"
                       />
                       #{i.sequenceNumber} {i.interviewType} {i.evaluation?.highestRungHeld ? `(R${i.evaluation.highestRungHeld})` : ""}
                     </label>
@@ -126,7 +126,7 @@ export function GraduationTab({
 
       {decisions.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-slate-700">History</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">History</h3>
           {decisions.map((d) => (
             <div
               className={`surface p-3.5 text-sm ${
@@ -135,14 +135,14 @@ export function GraduationTab({
               key={d.id}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   {new Date(d.decidedAt).toLocaleDateString()} · {d.decidedBy?.name}
                 </span>
                 <Badge tone={d.decision === "GRADUATE" ? "success" : "warning"} dot>
                   {d.decision.replace("_", " ")}
                 </Badge>
               </div>
-              <p className="mt-1.5 leading-relaxed text-slate-600">{d.reason}</p>
+              <p className="mt-1.5 leading-relaxed text-slate-600 dark:text-slate-400">{d.reason}</p>
             </div>
           ))}
         </div>

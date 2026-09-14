@@ -36,13 +36,15 @@ export function PageHeader({
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
         {icon && (
-          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-brand-50 to-brand-100/70 text-brand-600 ring-1 ring-inset ring-brand-200/60">
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-brand-50 to-brand-100/70 text-brand-600 ring-1 ring-inset ring-brand-200/60 dark:from-brand-500/15 dark:to-brand-500/10 dark:text-brand-400 dark:ring-brand-500/30">
             <Icon name={icon} size={19} />
           </span>
         )}
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-          {description && <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">{description}</p>}
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{title}</h1>
+          {description && (
+            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">{description}</p>
+          )}
           {meta && <div className="mt-2.5 flex flex-wrap items-center gap-2">{meta}</div>}
         </div>
       </div>
@@ -56,7 +58,7 @@ export function BackLink({ to, label }: { to: string; label: string }) {
   return (
     <Link
       to={to}
-      className="group -ml-1 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm font-medium text-slate-500 transition-colors hover:text-brand-700"
+      className="group -ml-1 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm font-medium text-slate-500 transition-colors hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-400"
     >
       <Icon
         name="arrowLeft"
@@ -71,7 +73,7 @@ export function BackLink({ to, label }: { to: string; label: string }) {
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <h2 className="text-sm font-semibold text-slate-900">{children}</h2>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{children}</h2>
       {action}
     </div>
   );
@@ -93,7 +95,7 @@ export function Tabs<T extends string>({
   return (
     <div
       role="tablist"
-      className="no-scrollbar -mb-px flex gap-1 overflow-x-auto border-b border-slate-200"
+      className="no-scrollbar -mb-px flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800"
     >
       {tabs.map((t) => {
         const isActive = active === t;
@@ -105,14 +107,18 @@ export function Tabs<T extends string>({
             aria-selected={isActive}
             onClick={() => onChange(t)}
             className={`group relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-md px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
-              isActive ? "text-brand-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+              isActive
+                ? "text-brand-700 dark:text-brand-400"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-200"
             }`}
           >
             {t}
             {count !== undefined && count > 0 && (
               <span
                 className={`inline-flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full px-1 text-2xs font-semibold tabular ${
-                  isActive ? "bg-brand-100 text-brand-700" : "bg-slate-100 text-slate-600"
+                  isActive
+                    ? "bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300"
+                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                 }`}
               >
                 {count}
@@ -134,11 +140,11 @@ export function Tabs<T extends string>({
 /** Two-column label/value list used across detail panels. */
 export function DetailList({ items }: { items: { label: string; value: ReactNode }[] }) {
   return (
-    <dl className="divide-y divide-slate-100">
+    <dl className="divide-y divide-slate-100 dark:divide-slate-800">
       {items.map((item) => (
         <div key={item.label} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
-          <dt className="shrink-0 text-sm text-slate-500">{item.label}</dt>
-          <dd className="min-w-0 text-right text-sm font-medium text-slate-900">{item.value}</dd>
+          <dt className="shrink-0 text-sm text-slate-500 dark:text-slate-400">{item.label}</dt>
+          <dd className="min-w-0 text-right text-sm font-medium text-slate-900 dark:text-slate-100">{item.value}</dd>
         </div>
       ))}
     </dl>

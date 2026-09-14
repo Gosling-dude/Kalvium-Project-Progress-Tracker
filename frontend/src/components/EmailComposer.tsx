@@ -118,9 +118,9 @@ function ComposeForm({
   });
 
   return (
-    <div className="surface animate-fade-in w-full p-4 ring-1 ring-brand-100">
-      <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100">
+    <div className="surface animate-fade-in w-full p-4 ring-1 ring-brand-100 dark:ring-brand-500/30">
+      <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/30">
           <Icon name="mail" size={13} />
         </span>
         Compose email
@@ -161,9 +161,9 @@ function ComposeForm({
 
       {body !== null && (
         <div className="mt-4 space-y-3">
-          <p className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600 ring-1 ring-inset ring-slate-200/70">
-            <span className="font-semibold text-slate-500">To:</span>
-            <span className="truncate font-medium text-slate-800">{student.email}</span>
+          <p className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600 ring-1 ring-inset ring-slate-200/70 dark:bg-slate-800/60 dark:text-slate-400 dark:ring-slate-700">
+            <span className="font-semibold text-slate-500 dark:text-slate-400">To:</span>
+            <span className="truncate font-medium text-slate-800 dark:text-slate-200">{student.email}</span>
           </p>
           <Field label="Subject" required>
             <Input value={subject ?? ""} onChange={(e) => setSubject(e.target.value)} />
@@ -171,7 +171,7 @@ function ComposeForm({
           <Field label="Body" hint="Edit freely before sending — this is exactly what gets sent.">
             <Textarea8 value={body} onChange={(e) => setBody(e.target.value)} />
           </Field>
-          <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
             <Button variant="secondary" onClick={onCancel}>
               Cancel
             </Button>
@@ -201,7 +201,7 @@ function Textarea8({ value, onChange }: { value: string; onChange: (e: React.Cha
       rows={8}
       value={value}
       onChange={onChange}
-      className="block w-full resize-y rounded-md border-0 bg-white px-3 py-2 font-mono text-xs leading-relaxed text-slate-900 shadow-xs ring-1 ring-inset ring-slate-300 transition-shadow hover:ring-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500"
+      className="block w-full resize-y rounded-md border-0 bg-white px-3 py-2 font-mono text-xs leading-relaxed text-slate-900 shadow-xs ring-1 ring-inset ring-slate-300 transition-shadow hover:ring-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600 dark:hover:ring-slate-500"
     />
   );
 }

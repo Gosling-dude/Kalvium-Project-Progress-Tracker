@@ -55,8 +55,8 @@ export function MoveTrackModal({ student, onClose, onDone }: { student: Student;
         }}
       >
         {error && <ErrorBanner message={error} />}
-        <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-inset ring-slate-200/70">
-          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Currently</p>
+        <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-inset ring-slate-200/70 dark:bg-slate-800/40 dark:ring-slate-700">
+          <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Currently</p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
             <TrackBadge track={student.currentTrack} />
             <Badge tone="brand">{student.currentStage.replace(/_/g, " ")}</Badge>
@@ -94,7 +94,9 @@ export function MoveTrackModal({ student, onClose, onDone }: { student: Student;
         </Field>
         <div
           className={`rounded-lg p-3 ring-1 ring-inset transition-colors ${
-            useOverride ? "bg-amber-50 ring-amber-200" : "bg-slate-50/70 ring-slate-200/70"
+            useOverride
+              ? "bg-amber-50 ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/30"
+              : "bg-slate-50/70 ring-slate-200/70 dark:bg-slate-800/40 dark:ring-slate-700"
           }`}
         >
           <Checkbox
@@ -110,7 +112,7 @@ export function MoveTrackModal({ student, onClose, onDone }: { student: Student;
             </div>
           )}
         </div>
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>

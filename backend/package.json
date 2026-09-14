@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc -p tsconfig.build.json",
@@ -11,6 +14,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "seed": "ts-node prisma/seed.ts",
+    "seed:deliverable-demo": "ts-node scripts/seedDeliverableDemo.ts",
+    "check:schema-parity": "ts-node scripts/checkSchemaParity.ts",
+    "prisma:generate:postgres": "prisma generate --schema prisma/postgres/schema.prisma",
+    "prisma:deploy:postgres": "prisma migrate deploy --schema prisma/postgres/schema.prisma",
+    "build:postgres": "npm run check:schema-parity && npm run prisma:generate:postgres && npm run prisma:deploy:postgres && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"

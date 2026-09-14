@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
+import { ForbiddenError } from "./lib/errors";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 import { authRouter } from "./routes/auth.routes";
@@ -30,8 +31,24 @@ import { userRouter } from "./routes/user.routes";
 export function createApp() {
   const app = express();
 
+  // Render (and most PaaS hosts) sit the app behind a reverse proxy/load
+  // balancer — without this, req.ip is the proxy's address, so every
+  // request looks like the same client to express-rate-limit below (either
+  // everyone gets rate-limited together, or the limiter does nothing).
+  app.set("trust proxy", 1);
+
   app.use(helmet());
-  app.use(cors({ origin: env.corsOrigin, credentials: true }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // No Origin header (server-to-server calls, curl, same-origin) —
+        // nothing to check against, so allow it through.
+        if (!origin || env.corsOrigins.includes(origin)) return callback(null, true);
+        callback(new ForbiddenError(`Origin '${origin}' is not allowed by CORS_ORIGIN.`));
+      },
+      credentials: true,
+    }),
+  );
   app.use(express.json({ limit: "2mb" }));
   app.use(cookieParser());
   app.use(pinoHttp({ logger, autoLogging: !env.isTest }));

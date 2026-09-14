@@ -45,14 +45,16 @@ export function FlagsPage() {
                 header: "Student",
                 className: "max-w-[140px] truncate",
                 render: (f) => (
-                  <span className="font-medium text-slate-900" title={f.student?.fullName ?? ""}>
+                  <span className="font-medium text-slate-900 dark:text-slate-100" title={f.student?.fullName ?? ""}>
                     {f.student?.fullName ?? "—"}
                   </span>
                 ),
               },
               {
                 header: "Category",
-                render: (f) => <span className="text-xs font-medium text-slate-600">{f.category.replace(/_/g, " ")}</span>,
+                render: (f) => (
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{f.category.replace(/_/g, " ")}</span>
+                ),
               },
               { header: "Severity", render: (f) => <SeverityBadge severity={f.severity} /> },
               {
@@ -67,13 +69,13 @@ export function FlagsPage() {
                   f.assignedTo?.name ? (
                     <span title={f.assignedTo.name}>{f.assignedTo.name}</span>
                   ) : (
-                    <span className="text-slate-300">Unassigned</span>
+                    <span className="text-slate-300 dark:text-slate-600">Unassigned</span>
                   ),
               },
               {
                 header: "Raised",
                 render: (f) => (
-                  <time className="text-xs text-slate-500" dateTime={f.createdAt}>
+                  <time className="text-xs text-slate-500 dark:text-slate-400" dateTime={f.createdAt}>
                     {new Date(f.createdAt).toLocaleDateString()}
                   </time>
                 ),

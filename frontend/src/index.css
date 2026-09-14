@@ -11,10 +11,15 @@
 
   html {
     -webkit-tap-highlight-color: transparent;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
-    @apply bg-slate-50 font-sans text-slate-900 antialiased;
+    @apply bg-slate-50 font-sans text-slate-900 antialiased transition-colors duration-150 dark:bg-slate-950 dark:text-slate-100;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeLegibility;
   }
@@ -34,11 +39,11 @@
   /* One consistent focus treatment across every interactive element, visible
      only for keyboard users so pointer clicks stay clean. */
   :focus-visible {
-    @apply outline-none ring-2 ring-brand-500/70 ring-offset-2 ring-offset-white;
+    @apply outline-none ring-2 ring-brand-500/70 ring-offset-2 ring-offset-white dark:ring-offset-slate-900;
   }
 
   ::selection {
-    @apply bg-brand-500/20 text-brand-950;
+    @apply bg-brand-500/20 text-brand-950 dark:text-brand-50;
   }
 
   /* Slim, unobtrusive scrollbars — the default Windows bars are the loudest
@@ -52,10 +57,10 @@
       background: transparent;
     }
     *::-webkit-scrollbar-thumb {
-      @apply rounded-full border-[3px] border-solid border-transparent bg-slate-300/80 bg-clip-padding;
+      @apply rounded-full border-[3px] border-solid border-transparent bg-slate-300/80 bg-clip-padding dark:bg-slate-600/80;
     }
     *::-webkit-scrollbar-thumb:hover {
-      @apply bg-slate-400;
+      @apply bg-slate-400 dark:bg-slate-500;
     }
     *::-webkit-scrollbar-corner {
       background: transparent;
@@ -65,6 +70,10 @@
   * {
     scrollbar-width: thin;
     scrollbar-color: rgb(203 213 225) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: rgb(71 85 105) transparent;
   }
 
   /* Respect the OS "reduce motion" setting — every animation in the app is
@@ -85,21 +94,21 @@
   /* Shared surface treatment so every panel in the app reads as the same
      material instead of each page inventing its own border/shadow mix. */
   .surface {
-    @apply rounded-xl border border-slate-200/80 bg-white shadow-xs;
+    @apply rounded-xl border border-slate-200/80 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900;
   }
 
   /* The subtle top-lit gradient used on headers and the login panel. */
   .surface-header {
-    @apply bg-gradient-to-b from-white to-slate-50/60;
+    @apply bg-gradient-to-b from-white to-slate-50/60 dark:from-slate-900 dark:to-slate-900/60;
   }
 
   .skeleton {
-    @apply relative overflow-hidden rounded-md bg-slate-200/70;
+    @apply relative overflow-hidden rounded-md bg-slate-200/70 dark:bg-slate-800/70;
   }
 
   .skeleton::after {
     content: "";
-    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/70 to-transparent;
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/70 to-transparent dark:via-slate-700/40;
   }
 
   /* Page-level entrance: content settles in rather than snapping. Applied by

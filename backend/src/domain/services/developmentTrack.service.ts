@@ -57,6 +57,18 @@ export async function assignDeliverable(input: {
   const student = await prisma.student.findUnique({ where: { id: input.studentId } });
   if (!student) throw new NotFoundError("Student", input.studentId);
 
+  // Only one deliverable set per A2/Track B stay: once the set has been
+  // emailed (see markDeliverableSetEmailed), no more deliverables can be
+  // added to it. This is cleared automatically when the student's track
+  // actually changes (see recordTrackTransition), so a later stay in A2/B
+  // starts a fresh, unlocked set.
+  if (student.deliverableEmailSentAt) {
+    throw new BusinessRuleError(
+      `A deliverable set has already been emailed to this student for Track ${input.track} on ${student.deliverableEmailSentAt.toLocaleDateString()}. ` +
+        "Another set can only be assigned once the student moves to a new track stage.",
+    );
+  }
+
   assertValidEstimate(input.track, input.direct.estimatedTimeValue, input.direct.estimatedTimeUnit);
 
   const activeEnrollment = await prisma.cohortEnrollment.findFirst({
@@ -169,6 +181,71 @@ export async function sumEstimatedTime(studentId: string, track: "A2" | "B") {
   const value = assignments.reduce((sum, a) => sum + a.estimatedTimeValue, 0);
   const verifiedCount = assignments.filter((a) => a.status === "VERIFIED").length;
   return { value, unit, count: assignments.length, verifiedCount };
+}
+
+// Called right after the deliverable-assignment email actually sends (see
+// deliverable.routes.ts POST /assignments/mark-emailed). Locks in the set —
+// assignDeliverable refuses to add more once deliverableEmailSentAt is set —
+// and derives one combined deadline from the total estimated time of every
+// deliverable currently assigned to this student for this track (not just
+// whichever ones happened to be selected for the email), per spec: the
+// deadline covers "all the deliverables that is assigned", counted from the
+// moment they were actually notified.
+export async function markDeliverableSetEmailed(studentId: string, track: "A2" | "B", actorId: string) {
+  const student = await prisma.student.findUnique({ where: { id: studentId } });
+  if (!student) throw new NotFoundError("Student", studentId);
+  if (student.currentTrack !== track) {
+    throw new BusinessRuleError(`Student is currently Track ${student.currentTrack}, not ${track}. Refresh before sending this email.`);
+  }
+
+  const { value, unit, count } = await sumEstimatedTime(studentId, track);
+  if (count === 0) {
+    throw new BusinessRuleError("No deliverables are assigned to this student yet — nothing to email.");
+  }
+
+  const sentAt = new Date();
+  // A2 estimates are in hours; converted at 8 usable hours per day (not
+  // 24) — a student can't realistically put in a full 24-hour day.
+  const totalDays = unit === "HOURS" ? value / 8 : value;
+  const deadline = new Date(sentAt);
+  deadline.setDate(deadline.getDate() + Math.ceil(totalDays));
+
+  const updated = await prisma.student.update({
+    where: { id: studentId },
+    data: { deliverableEmailSentAt: sentAt, deliverableDeadline: deadline },
+  });
+
+  await recordAuditEvent({
+    actorId,
+    action: "DELIVERABLE_SET_EMAILED",
+    entityType: "Student",
+    entityId: studentId,
+    after: { track, deliverableEmailSentAt: sentAt, deliverableDeadline: deadline, totalEstimated: `${value} ${unit.toLowerCase()}` },
+  });
+
+  return { deliverableEmailSentAt: updated.deliverableEmailSentAt, deliverableDeadline: updated.deliverableDeadline };
+}
+
+export type DeliverableSetStatus = "NO_DELIVERABLES" | "DRAFT" | "ON_TRACK" | "OVERDUE" | "ALL_SUBMITTED" | "COMPLETED";
+
+// One combined status for a student's current A2/Track B deliverable set —
+// shown on the Students list and the student's Development tab, to both
+// Admin and Growth Coach. Purely derived (never stored) so it's always
+// correct against "now" and against whatever the deliverables' statuses
+// currently are, without a background job to keep it in sync.
+export function deriveDeliverableSetStatus(
+  student: { currentTrack: string | null; deliverableEmailSentAt: Date | string | null; deliverableDeadline: Date | string | null },
+  allDeliverables: { track: string; status: string }[],
+): DeliverableSetStatus | null {
+  if (student.currentTrack !== "A2" && student.currentTrack !== "B") return null;
+  const deliverables = allDeliverables.filter((d) => d.track === student.currentTrack);
+  if (deliverables.length === 0) return "NO_DELIVERABLES";
+  if (deliverables.every((d) => d.status === "VERIFIED")) return "COMPLETED";
+  if (!student.deliverableEmailSentAt) return "DRAFT";
+  if (deliverables.every((d) => d.status === "VERIFIED" || d.status === "SUBMITTED")) return "ALL_SUBMITTED";
+  const deadline = student.deliverableDeadline ? new Date(student.deliverableDeadline) : null;
+  if (deadline && deadline.getTime() < Date.now()) return "OVERDUE";
+  return "ON_TRACK";
 }
 
 // Renders assigned deliverables as an HTML table for the assignment email —

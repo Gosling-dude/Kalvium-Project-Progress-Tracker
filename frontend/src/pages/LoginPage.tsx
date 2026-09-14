@@ -87,22 +87,22 @@ export function LoginPage() {
       </div>
 
       {/* Form panel */}
-      <div className="flex flex-1 items-center justify-center bg-slate-50 px-4 py-10 sm:px-8">
+      <div className="flex flex-1 items-center justify-center bg-slate-50 px-4 py-10 dark:bg-slate-950 sm:px-8">
         <div className="w-full max-w-sm animate-fade-in-up">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-base font-bold text-white shadow-brand">
               K
             </span>
             <div className="leading-tight">
-              <p className="text-sm font-semibold text-slate-900">Kalvium Project Defence</p>
-              <p className="text-xs text-slate-500">Progress Tracker</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Kalvium Project Defence</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Progress Tracker</p>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-          <p className="mt-1.5 text-sm text-slate-500">Sign in to the Project Defence console.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Welcome back</h1>
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Sign in to the Project Defence console.</p>
 
-          <div className="mt-7 rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
+          <div className="mt-7 rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <form className="space-y-4" onSubmit={handleSubmit}>
               {error && <ErrorBanner message={error} />}
               <Field label="Email" required>
@@ -132,7 +132,7 @@ export function LoginPage() {
             </form>
           </div>
 
-          <p className="mt-5 text-center text-xs text-slate-400">
+          <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
             Trouble signing in? Contact your Program Admin.
           </p>
         </div>

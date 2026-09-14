@@ -9,6 +9,7 @@ import {
   assignDeliverable,
   deleteDeliverableAssignment,
   getDeliverablesTableHtml,
+  markDeliverableSetEmailed,
   recordDeliverableSubmission,
   sumEstimatedTime,
   updateDeliverableAssignment,
@@ -87,6 +88,20 @@ deliverableRouter.get(
     const schema = z.object({ studentId: z.string().min(1), track: z.enum(["A2", "B"]) });
     const input = schema.parse(req.query);
     res.json({ data: await sumEstimatedTime(input.studentId, input.track) });
+  }),
+);
+
+// Called by the frontend right after the deliverable-assignment email
+// actually sends — locks the set (see assignDeliverable) and computes the
+// combined deadline from the total estimated time of everything currently
+// assigned, counted from this moment.
+deliverableRouter.post(
+  "/assignments/mark-emailed",
+  adminOnly,
+  asyncHandler(async (req, res) => {
+    const schema = z.object({ studentId: z.string().min(1), track: z.enum(["A2", "B"]) });
+    const input = schema.parse(req.body);
+    res.json({ data: await markDeliverableSetEmailed(input.studentId, input.track, req.user!.id) });
   }),
 );
 

@@ -97,6 +97,9 @@ export const fetchDeliverablesTable = (studentId: string, track: string, ids?: s
 export const recordDeliverableSubmission = (id: string, submissionFromStudent: string) =>
   unwrap(api.post(`/deliverables/assignments/${id}/submission`, { submissionFromStudent }));
 export const verifyDeliverable = (id: string, input: Record<string, unknown>) => unwrap(api.post(`/deliverables/assignments/${id}/verify`, input));
+// Called right after the deliverable-assignment email actually sends — locks the set and computes its combined deadline.
+export const markDeliverablesEmailed = (studentId: string, track: string) =>
+  unwrap(api.post("/deliverables/assignments/mark-emailed", { studentId, track }));
 
 // ---- Growth Coach Evaluations ----
 export const recordGrowthCoachEvaluation = (input: Record<string, unknown>) => unwrap(api.post("/growth-coach-evaluations", input));

@@ -13,7 +13,7 @@ import { Student, Campus, Cohort, GrowthCoach, Pagination, ProgramTrackSummary }
 import { Button } from "../components/ui/Button";
 import { Table, Pager } from "../components/ui/Table";
 import { TableSkeleton, ErrorBanner } from "../components/ui/Feedback";
-import { Badge, ProgramStatusBadge, TrackBadge } from "../components/ui/Badge";
+import { Badge, DeliverableSetStatusBadge, ProgramStatusBadge, TrackBadge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { Field, Input, InputWithIcon, Select } from "../components/ui/Form";
 import { PageContainer, PageHeader } from "../components/ui/Page";
@@ -144,14 +144,14 @@ export function StudentsPage() {
           <button
             type="button"
             onClick={clearFilters}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <Icon name="close" size={13} />
             Clear {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}
           </button>
         )}
         {data?.pagination && (
-          <span className="ml-auto pr-1 text-xs font-medium tabular text-slate-500">
+          <span className="ml-auto pr-1 text-xs font-medium tabular text-slate-500 dark:text-slate-400">
             {data.pagination.total ?? data.data.length} result{(data.pagination.total ?? data.data.length) === 1 ? "" : "s"}
           </span>
         )}
@@ -159,7 +159,7 @@ export function StudentsPage() {
 
       <div className="surface">
         {isLoading ? (
-          <TableSkeleton rows={8} cols={8} />
+          <TableSkeleton rows={8} cols={10} />
         ) : (
           <>
             <Table
@@ -173,7 +173,7 @@ export function StudentsPage() {
                   className: "max-w-[180px] truncate",
                   render: (s) => (
                     <span className="flex items-center gap-2.5" title={s.fullName}>
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-50 to-brand-100 text-2xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200/60">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-50 to-brand-100 text-2xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200/60 dark:from-brand-500/20 dark:to-brand-500/10 dark:text-brand-300 dark:ring-brand-500/30">
                         {s.fullName
                           .trim()
                           .split(/\s+/)
@@ -181,7 +181,7 @@ export function StudentsPage() {
                           .map((p) => p[0]?.toUpperCase() ?? "")
                           .join("")}
                       </span>
-                      <span className="truncate font-medium text-slate-900">{s.fullName}</span>
+                      <span className="truncate font-medium text-slate-900 dark:text-slate-100">{s.fullName}</span>
                     </span>
                   ),
                 },
@@ -195,17 +195,38 @@ export function StudentsPage() {
                   className: "max-w-[140px] truncate",
                   render: (s) => <span title={s.currentCohort?.name ?? ""}>{s.currentCohort?.name ?? "—"}</span>,
                 },
-                { header: "Batch", render: (s) => s.batch ?? <span className="text-slate-300">—</span> },
+                { header: "Batch", render: (s) => s.batch ?? <span className="text-slate-300 dark:text-slate-600">—</span> },
                 { header: "Track", render: (s) => <TrackBadge track={s.currentTrack} /> },
                 {
                   header: "Stage",
-                  render: (s) => <span className="text-xs font-medium text-slate-600">{s.currentStage.replace(/_/g, " ")}</span>,
+                  render: (s) => (
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {s.currentStage.replace(/_/g, " ")}
+                    </span>
+                  ),
                 },
                 { header: "Status", render: (s) => <ProgramStatusBadge status={s.programStatus} /> },
                 {
+                  // Only meaningful for Track A2 / B — deriveDeliverableSetStatus
+                  // returns null for every other track, and the badge renders "—".
+                  header: "Deliverable Status",
+                  render: (s) => <DeliverableSetStatusBadge status={s.deliverableSetStatus} />,
+                },
+                {
+                  header: "Deadline",
+                  render: (s) =>
+                    s.deliverableDeadline ? (
+                      <span className={s.deliverableSetStatus === "OVERDUE" ? "font-medium text-rose-600 dark:text-rose-400" : ""}>
+                        {new Date(s.deliverableDeadline).toLocaleDateString()}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300 dark:text-slate-600">—</span>
+                    ),
+                },
+                {
                   header: "Flags",
                   render: (s) =>
-                    s.openFlagCount ? <Badge tone="danger">{s.openFlagCount} open</Badge> : <span className="text-slate-300">—</span>,
+                    s.openFlagCount ? <Badge tone="danger">{s.openFlagCount} open</Badge> : <span className="text-slate-300 dark:text-slate-600">—</span>,
                 },
               ]}
             />
@@ -260,7 +281,7 @@ function Stat({
 function MiniStat({ label, value, valueClassName }: { label: string; value: number; valueClassName: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-2xs font-medium uppercase leading-tight tracking-wide text-slate-500">{label}</dt>
+      <dt className="text-2xs font-medium uppercase leading-tight tracking-wide text-slate-500 dark:text-slate-400">{label}</dt>
       <dd className={`text-base font-semibold tabular ${valueClassName}`}>{value}</dd>
     </div>
   );
@@ -270,8 +291,8 @@ function MiniStat({ label, value, valueClassName }: { label: string; value: numb
 function CountRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <dt className="text-xs text-slate-600">{label}</dt>
-      <dd className="text-sm font-semibold tabular text-slate-900">{value}</dd>
+      <dt className="text-xs text-slate-600 dark:text-slate-400">{label}</dt>
+      <dd className="text-sm font-semibold tabular text-slate-900 dark:text-slate-100">{value}</dd>
     </div>
   );
 }
@@ -295,12 +316,12 @@ function ProgramTrackPanel() {
 
   return (
     <section className="surface overflow-hidden">
-      <div className="surface-header flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-200/80 px-4 py-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Icon name="trendUp" size={15} className="text-brand-600" />
+      <div className="surface-header flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-200/80 px-4 py-3 dark:border-slate-800">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <Icon name="trendUp" size={15} className="text-brand-600 dark:text-brand-400" />
           Program totals
         </h2>
-        <p className="text-xs text-slate-500">All cohorts · since inception</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">All cohorts · since inception</p>
       </div>
 
       {isLoading ? (
@@ -311,42 +332,47 @@ function ProgramTrackPanel() {
           <div className="skeleton h-[5.25rem] w-full" />
         </div>
       ) : isError || !data ? (
-        <p className="px-4 py-4 text-xs text-slate-500">Program totals are unavailable right now.</p>
+        <p className="px-4 py-4 text-xs text-slate-500 dark:text-slate-400">Program totals are unavailable right now.</p>
       ) : (
         <div className={gridClass}>
-          <div className="rounded-lg border border-emerald-200/70 bg-emerald-50/50 px-3 py-2.5">
-            <Stat label="Graduated" value={data.graduatedCount} icon="graduation" toneClassName="text-emerald-700" />
+          <div className="rounded-lg border border-emerald-200/70 bg-emerald-50/50 px-3 py-2.5 dark:border-emerald-500/20 dark:bg-emerald-500/5">
+            <Stat
+              label="Graduated"
+              value={data.graduatedCount}
+              icon="graduation"
+              toneClassName="text-emerald-700 dark:text-emerald-400"
+            />
           </div>
 
           {/* Track A owns its sub-tracks, so A1/A2 are nested inside this cell
               rather than standing alongside it. The headline number is the
               roll-up (A + A1 + A2), matching each cohort's own dashboard. */}
-          <div className="rounded-lg border border-blue-200/70 bg-blue-50/40 px-3 py-2.5 sm:col-span-2">
+          <div className="rounded-lg border border-blue-200/70 bg-blue-50/40 px-3 py-2.5 dark:border-blue-500/20 dark:bg-blue-500/5 sm:col-span-2">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-blue-700">
+              <span className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">
                 <Icon name="clipboard" size={13} />
                 Track A
               </span>
-              <span className="text-2xl font-semibold tabular text-blue-700">{data.trackACount}</span>
+              <span className="text-2xl font-semibold tabular text-blue-700 dark:text-blue-400">{data.trackACount}</span>
             </div>
-            <dl className="mt-2 grid grid-cols-3 gap-2 border-t border-blue-200/60 pt-2">
-              <MiniStat label="Sub-track A1" value={data.trackABreakdown.a1} valueClassName="text-emerald-600" />
-              <MiniStat label="Sub-track A2" value={data.trackABreakdown.a2} valueClassName="text-amber-600" />
+            <dl className="mt-2 grid grid-cols-3 gap-2 border-t border-blue-200/60 pt-2 dark:border-blue-500/20">
+              <MiniStat label="Sub-track A1" value={data.trackABreakdown.a1} valueClassName="text-emerald-600 dark:text-emerald-400" />
+              <MiniStat label="Sub-track A2" value={data.trackABreakdown.a2} valueClassName="text-amber-600 dark:text-amber-400" />
               <MiniStat
                 label="No sub-track yet"
                 value={data.trackABreakdown.unassignedSubTrack}
-                valueClassName="text-slate-500"
+                valueClassName="text-slate-500 dark:text-slate-400"
               />
             </dl>
           </div>
 
-          <div className="rounded-lg border border-rose-200/70 bg-rose-50/40 px-3 py-2.5">
-            <Stat label="Track B" value={data.trackBCount} icon="sparkle" toneClassName="text-rose-700" />
-            <p className="mt-0.5 text-2xs text-rose-700/70">No sub-tracks.</p>
+          <div className="rounded-lg border border-rose-200/70 bg-rose-50/40 px-3 py-2.5 dark:border-rose-500/20 dark:bg-rose-500/5">
+            <Stat label="Track B" value={data.trackBCount} icon="sparkle" toneClassName="text-rose-700 dark:text-rose-400" />
+            <p className="mt-0.5 text-2xs text-rose-700/70 dark:text-rose-400/70">No sub-tracks.</p>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-            <span className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-slate-500">
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/40">
+            <span className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               <Icon name="students" size={13} />
               Everyone
             </span>
@@ -358,8 +384,9 @@ function ProgramTrackPanel() {
         </div>
       )}
 
-      <p className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-3 text-2xs leading-relaxed text-slate-500">
-        Covers students across <strong className="font-semibold text-slate-600">all cohorts</strong> who have been part of the
+      <p className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-3 text-2xs leading-relaxed text-slate-500 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-400">
+        Covers students across{" "}
+        <strong className="font-semibold text-slate-600 dark:text-slate-300">all cohorts</strong> who have been part of the
         Project Defence track from the very start of the program until now — not just the current intake, and not affected by
         the filters or search below. A graduated student is counted only under Graduated, never also under the track they left.
       </p>
@@ -454,7 +481,7 @@ function CreateStudentModal({ onClose, onCreated }: { onClose: () => void; onCre
             ))}
           </Select>
         </Field>
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>

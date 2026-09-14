@@ -7,6 +7,7 @@ import {
   dismissGrowthCoachEvaluation,
   fetchDeliverablesTable,
   fetchEstimatedTime,
+  markDeliverablesEmailed,
   recordDeliverableSubmission,
   recordGrowthCoachEvaluation,
   updateDeliverable,
@@ -17,7 +18,7 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { Field, Input, Select, Textarea } from "../../components/ui/Form";
 import { ErrorBanner, EmptyState } from "../../components/ui/Feedback";
-import { Badge } from "../../components/ui/Badge";
+import { Badge, DeliverableSetStatusBadge } from "../../components/ui/Badge";
 import { Icon } from "../../components/ui/Icon";
 import { EmailComposer } from "../../components/EmailComposer";
 import { useAuth } from "../../lib/auth";
@@ -98,19 +99,35 @@ export function DevelopmentTab({
     <div className="space-y-6">
       {isDevTrack && (
         <div className="surface p-4">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100">
-              <Icon name="sparkle" size={13} />
-            </span>
-            {TRACK_LABEL[track as string]}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/30">
+                <Icon name="sparkle" size={13} />
+              </span>
+              {TRACK_LABEL[track as string]}
+            </h2>
+            {student.deliverableDeadline && (
+              <div className="flex items-center gap-2">
+                <DeliverableSetStatusBadge status={student.deliverableSetStatus} />
+                <span
+                  className={`text-xs ${
+                    student.deliverableSetStatus === "OVERDUE"
+                      ? "font-medium text-rose-600 dark:text-rose-400"
+                      : "text-slate-500 dark:text-slate-400"
+                  }`}
+                >
+                  Deadline {new Date(student.deliverableDeadline).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+          </div>
           <EstimatedTimeSummary studentId={student.id} track={track as "A2" | "B"} />
         </div>
       )}
 
       <section>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
             Deliverables
             {deliverables.length > 0 && (
               <Badge tone={verifiedCount === deliverables.length ? "success" : "neutral"} dot>
@@ -120,9 +137,9 @@ export function DevelopmentTab({
           </h3>
           <div className="flex items-center gap-2">
             {isDevTrack && isAdmin && deliverables.length > 0 && (
-              <SendDeliverablesEmail student={student} track={track as "A2" | "B"} selectedIds={selectedIds} />
+              <SendDeliverablesEmail student={student} track={track as "A2" | "B"} selectedIds={selectedIds} onChanged={onChanged} />
             )}
-            {isDevTrack && isAdmin && (
+            {isDevTrack && isAdmin && !student.deliverableEmailSentAt && (
               <Button size="sm" icon="plus" onClick={() => setShowAdd(true)}>
                 Add Deliverable
               </Button>
@@ -130,10 +147,17 @@ export function DevelopmentTab({
           </div>
         </div>
 
+        {isDevTrack && isAdmin && student.deliverableEmailSentAt && (
+          <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">
+            This set was emailed on {new Date(student.deliverableEmailSentAt).toLocaleDateString()} — only one set can be assigned per
+            Track {track} stay, so more deliverables can't be added until the student moves to a new track stage.
+          </p>
+        )}
+
         {/* Completion bar across all assigned deliverables — the one number both
             Admin and Growth Coach are tracking on this tab. */}
         {deliverables.length > 0 && (
-          <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
             <div
               className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500 ease-smooth"
               style={{ width: `${(verifiedCount / deliverables.length) * 100}%` }}
@@ -141,7 +165,9 @@ export function DevelopmentTab({
           </div>
         )}
         {isAdmin && deliverables.length > 0 && (
-          <p className="mb-2 text-xs text-slate-400">Checked deliverables are the ones included when you send the assignment email.</p>
+          <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">
+            Checked deliverables are the ones included when you send the assignment email.
+          </p>
         )}
         <div className="space-y-2">
           {deliverables.map((d) => (
@@ -156,10 +182,10 @@ export function DevelopmentTab({
           ))}
           {deliverables.length === 0 && (
             <div className="surface flex flex-col items-center gap-2 py-10 text-center">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:ring-slate-700">
                 <Icon name="clipboard" size={18} />
               </span>
-              <p className="text-sm font-medium text-slate-600">No deliverables assigned yet.</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No deliverables assigned yet.</p>
             </div>
           )}
         </div>
@@ -169,7 +195,7 @@ export function DevelopmentTab({
 
       {growthCoachEvaluations.length > 0 && (
         <section>
-          <h3 className="mb-2 text-sm font-semibold text-slate-700">Growth Coach history</h3>
+          <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Growth Coach history</h3>
           <div className="space-y-2">
             {growthCoachEvaluations.map((g) => (
               <GrowthCoachEvaluationRow key={g.id} evaluation={g} isAdmin={isAdmin} onChanged={onChanged} />
@@ -197,14 +223,31 @@ export function DevelopmentTab({
 // deliverables (includes the total estimated time across just those, as its
 // last row) so it's already in place as the `deliverables` variable — the
 // admin only needs to click Preview, then edit the resulting body freely.
-function SendDeliverablesEmail({ student, track, selectedIds }: { student: Student; track: "A2" | "B"; selectedIds: string[] }) {
+function SendDeliverablesEmail({
+  student,
+  track,
+  selectedIds,
+  onChanged,
+}: {
+  student: Student;
+  track: "A2" | "B";
+  selectedIds: string[];
+  onChanged: () => void;
+}) {
   const { data } = useQuery({
     queryKey: ["deliverables-table", student.id, track, selectedIds],
     queryFn: () => fetchDeliverablesTable(student.id, track, selectedIds),
     enabled: selectedIds.length > 0,
   });
+  // Right after the email actually sends: locks the set and computes its
+  // combined deadline from the total estimated time of everything assigned
+  // (not just the ones selected for this email) — see markDeliverableSetEmailed.
+  const markEmailedMutation = useMutation({
+    mutationFn: () => markDeliverablesEmailed(student.id, track),
+    onSuccess: onChanged,
+  });
   if (selectedIds.length === 0) {
-    return <span className="text-xs text-slate-400">Select at least one deliverable to email</span>;
+    return <span className="text-xs text-slate-400 dark:text-slate-500">Select at least one deliverable to email</span>;
   }
   return (
     <EmailComposer
@@ -215,6 +258,7 @@ function SendDeliverablesEmail({ student, track, selectedIds }: { student: Stude
       relatedEntityType="Student"
       relatedEntityId={student.id}
       triggerLabel={`Send ${selectedIds.length} Selected Deliverable${selectedIds.length === 1 ? "" : "s"}`}
+      onSent={() => markEmailedMutation.mutate()}
     />
   );
 }
@@ -227,21 +271,21 @@ function EstimatedTimeSummary({ studentId, track }: { studentId: string; track: 
   if (!data || data.count === 0) return null;
   return (
     <div className="mt-3 grid grid-cols-3 gap-3">
-      <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-inset ring-slate-200/70">
-        <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Assigned</p>
-        <p className="mt-0.5 text-lg font-semibold tabular text-slate-900">{data.count}</p>
+      <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-inset ring-slate-200/70 dark:bg-slate-800/40 dark:ring-slate-700">
+        <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Assigned</p>
+        <p className="mt-0.5 text-lg font-semibold tabular text-slate-900 dark:text-slate-100">{data.count}</p>
       </div>
-      <div className="rounded-lg bg-brand-50/70 px-3 py-2 ring-1 ring-inset ring-brand-100">
-        <p className="text-2xs font-semibold uppercase tracking-wider text-brand-600/80">Estimated time</p>
-        <p className="mt-0.5 text-lg font-semibold tabular text-brand-700">
+      <div className="rounded-lg bg-brand-50/70 px-3 py-2 ring-1 ring-inset ring-brand-100 dark:bg-brand-500/10 dark:ring-brand-500/30">
+        <p className="text-2xs font-semibold uppercase tracking-wider text-brand-600/80 dark:text-brand-400/90">Estimated time</p>
+        <p className="mt-0.5 text-lg font-semibold tabular text-brand-700 dark:text-brand-400">
           {data.value} <span className="text-xs font-medium">{data.unit.toLowerCase()}</span>
         </p>
       </div>
-      <div className="rounded-lg bg-emerald-50/70 px-3 py-2 ring-1 ring-inset ring-emerald-100">
-        <p className="text-2xs font-semibold uppercase tracking-wider text-emerald-600/80">Verified</p>
-        <p className="mt-0.5 text-lg font-semibold tabular text-emerald-700">
+      <div className="rounded-lg bg-emerald-50/70 px-3 py-2 ring-1 ring-inset ring-emerald-100 dark:bg-emerald-500/10 dark:ring-emerald-500/30">
+        <p className="text-2xs font-semibold uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/90">Verified</p>
+        <p className="mt-0.5 text-lg font-semibold tabular text-emerald-700 dark:text-emerald-400">
           {data.verifiedCount}
-          <span className="text-xs font-medium text-emerald-600/70"> / {data.count}</span>
+          <span className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/80"> / {data.count}</span>
         </p>
       </div>
     </div>
@@ -369,9 +413,11 @@ function DeliverableRow({
   }
 
   return (
-    <div className={`rounded-md border p-3 text-sm ${isVerified ? "border-emerald-200 bg-emerald-50/40" : "border-slate-100"}`}>
+    <div
+      className={`rounded-md border p-3 text-sm ${isVerified ? "border-emerald-200 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-500/5" : "border-slate-100 dark:border-slate-800"}`}
+    >
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-2 font-medium text-slate-800">
+        <span className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-200">
           {isAdmin && (
             <input
               type="checkbox"
@@ -392,14 +438,14 @@ function DeliverableRow({
           <Badge tone={isVerified ? "success" : deliverable.status === "REJECTED" ? "danger" : "neutral"}>{deliverable.status.replace("_", " ")}</Badge>
           <button
             type="button"
-            className="text-xs text-slate-400 hover:text-slate-600"
+            className="text-xs text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
             onClick={() => (expanded ? setExpanded(false) : openDetails())}
           >
             {expanded ? "▾" : "▸"}
           </button>
         </div>
       </div>
-      <p className="mt-1 text-xs text-slate-500">{deliverable.whatStudentMustDo}</p>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{deliverable.whatStudentMustDo}</p>
       {!isVerified && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Input className="max-w-xs" placeholder="Submission link" value={submission} onChange={(e) => setSubmission(e.target.value)} />
@@ -415,18 +461,20 @@ function DeliverableRow({
           </Button>
         </div>
       )}
-      {deliverable.feedback && <p className="mt-1 text-xs text-slate-500">Feedback: {deliverable.feedback}</p>}
+      {deliverable.feedback && (
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Feedback: {deliverable.feedback}</p>
+      )}
 
       {expanded && mode === "view" && (
-        <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs text-slate-600">
-          <p><strong className="text-slate-700">Gap addressed:</strong> {deliverable.gapAddressed}</p>
-          <p><strong className="text-slate-700">Expected outcome:</strong> {deliverable.expectedOutcome}</p>
-          <p><strong className="text-slate-700">Submission type:</strong> {deliverable.submissionType}</p>
-          <p><strong className="text-slate-700">Submission required:</strong> {deliverable.submissionRequired}</p>
-          {deliverable.submissionDetails && <p><strong className="text-slate-700">Submission details:</strong> {deliverable.submissionDetails}</p>}
-          <p><strong className="text-slate-700">Verification criteria:</strong> {deliverable.verificationCriteria}</p>
-          <p><strong className="text-slate-700">Estimated time:</strong> {deliverable.estimatedTimeValue} {deliverable.estimatedTimeUnit.toLowerCase()}</p>
-          <p><strong className="text-slate-700">Due:</strong> {deliverable.dueAt ? new Date(deliverable.dueAt).toLocaleDateString() : "—"}</p>
+        <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+          <p><strong className="text-slate-700 dark:text-slate-300">Gap addressed:</strong> {deliverable.gapAddressed}</p>
+          <p><strong className="text-slate-700 dark:text-slate-300">Expected outcome:</strong> {deliverable.expectedOutcome}</p>
+          <p><strong className="text-slate-700 dark:text-slate-300">Submission type:</strong> {deliverable.submissionType}</p>
+          <p><strong className="text-slate-700 dark:text-slate-300">Submission required:</strong> {deliverable.submissionRequired}</p>
+          {deliverable.submissionDetails && <p><strong className="text-slate-700 dark:text-slate-300">Submission details:</strong> {deliverable.submissionDetails}</p>}
+          <p><strong className="text-slate-700 dark:text-slate-300">Verification criteria:</strong> {deliverable.verificationCriteria}</p>
+          <p><strong className="text-slate-700 dark:text-slate-300">Estimated time:</strong> {deliverable.estimatedTimeValue} {deliverable.estimatedTimeUnit.toLowerCase()}</p>
+          <p><strong className="text-slate-700 dark:text-slate-300">Due:</strong> {deliverable.dueAt ? new Date(deliverable.dueAt).toLocaleDateString() : "—"}</p>
           {isAdmin && (
             <div className="flex gap-2 pt-1">
               <Button size="sm" variant="secondary" onClick={() => setMode("edit")}>Edit</Button>
@@ -437,8 +485,8 @@ function DeliverableRow({
       )}
 
       {expanded && mode === "confirmDelete" && (
-        <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs">
-          <span className="text-rose-700">Delete this deliverable? This cannot be undone.</span>
+        <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs dark:border-slate-800">
+          <span className="text-rose-700 dark:text-rose-400">Delete this deliverable? This cannot be undone.</span>
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => setMode("view")} disabled={deleteMutation.isPending}>
               Cancel
@@ -504,7 +552,7 @@ function EditDeliverableForm({
 
   return (
     <form
-      className="mt-3 space-y-2 border-t border-slate-100 pt-3"
+      className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800"
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);
@@ -564,16 +612,16 @@ function GrowthCoachEvaluationRow({
   });
 
   return (
-    <div className="rounded-lg border border-slate-200/70 p-3 text-sm">
+    <div className="rounded-lg border border-slate-200/70 p-3 text-sm dark:border-slate-700">
       {error && <div className="mb-2"><ErrorBanner message={error} /></div>}
       <div className="flex items-center justify-between">
         <span>{g.track} · {new Date(g.evaluatedAt).toLocaleDateString()}</span>
         <Badge tone={g.decision === "SUFFICIENT" ? "success" : "warning"}>{g.decision.replace("_", " ")}</Badge>
       </div>
-      <p className="text-slate-600">{g.feedback}</p>
+      <p className="text-slate-600 dark:text-slate-400">{g.feedback}</p>
       {g.pendingAdminConfirmation && (
-        <div className="mt-2 flex items-center gap-2 rounded-md bg-amber-50 p-2">
-          <span className="text-xs text-amber-800">
+        <div className="mt-2 flex items-center gap-2 rounded-md bg-amber-50 p-2 dark:bg-amber-500/10">
+          <span className="text-xs text-amber-800 dark:text-amber-300">
             Recorded by a Growth Coach — the track move above has not been applied yet.
           </span>
           {isAdmin ? (
@@ -586,7 +634,7 @@ function GrowthCoachEvaluationRow({
               </Button>
             </div>
           ) : (
-            <span className="ml-auto text-xs text-amber-700">Awaiting Program Admin confirmation</span>
+            <span className="ml-auto text-xs text-amber-700 dark:text-amber-400">Awaiting Program Admin confirmation</span>
           )}
         </div>
       )}
@@ -610,7 +658,7 @@ function GrowthCoachForm({ student, onChanged }: { student: Student; onChanged: 
 
   return (
     <div className="surface p-4">
-      <h3 className="mb-2 text-sm font-semibold text-slate-900">Record Growth Coach Evaluation</h3>
+      <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Record Growth Coach Evaluation</h3>
       {error && <div className="mb-2"><ErrorBanner message={error} /></div>}
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Decision">
@@ -626,7 +674,7 @@ function GrowthCoachForm({ student, onChanged }: { student: Student; onChanged: 
           Record Decision
         </Button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
         {student.currentTrack === "A2"
           ? "Sufficient promotes directly to Track A1 (Video Questioning is not repeated)."
           : "Sufficient promotes to Track A via Orientation → Video Questioning (never skipped for Track B)."}

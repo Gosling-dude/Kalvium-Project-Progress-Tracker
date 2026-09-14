@@ -5,10 +5,14 @@ export function Spinner({ size = 24, label, className = "" }: { size?: number; l
   return (
     <div className={`flex flex-col items-center justify-center gap-2.5 py-10 ${className}`} role="status" aria-live="polite">
       <span
-        className="animate-spin rounded-full border-2 border-slate-200 border-t-brand-600"
+        className="animate-spin rounded-full border-2 border-slate-200 border-t-brand-600 dark:border-slate-700 dark:border-t-brand-500"
         style={{ width: size, height: size }}
       />
-      {label ? <span className="text-xs font-medium text-slate-500">{label}</span> : <span className="sr-only">Loading…</span>}
+      {label ? (
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</span>
+      ) : (
+        <span className="sr-only">Loading…</span>
+      )}
     </div>
   );
 }
@@ -28,15 +32,15 @@ export function ErrorBanner({ message, onRetry }: { message: string; onRetry?: (
   return (
     <div
       role="alert"
-      className="flex animate-fade-in items-start gap-2.5 rounded-lg bg-rose-50 px-3 py-2.5 text-sm text-rose-800 ring-1 ring-inset ring-rose-200"
+      className="flex animate-fade-in items-start gap-2.5 rounded-lg bg-rose-50 px-3 py-2.5 text-sm text-rose-800 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/30"
     >
-      <Icon name="alert" size={16} className="mt-0.5 shrink-0 text-rose-500" />
+      <Icon name="alert" size={16} className="mt-0.5 shrink-0 text-rose-500 dark:text-rose-400" />
       <span className="min-w-0 flex-1 leading-relaxed">{message}</span>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-rose-700 underline-offset-2 transition-colors hover:bg-rose-100 hover:underline"
+          className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-rose-700 underline-offset-2 transition-colors hover:bg-rose-100 hover:underline dark:text-rose-300 dark:hover:bg-rose-500/20"
         >
           Retry
         </button>
@@ -47,8 +51,8 @@ export function ErrorBanner({ message, onRetry }: { message: string; onRetry?: (
 
 export function SuccessBanner({ message }: { message: string }) {
   return (
-    <div className="flex animate-fade-in items-start gap-2.5 rounded-lg bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-200">
-      <Icon name="checkCircle" size={16} className="mt-0.5 shrink-0 text-emerald-500" />
+    <div className="flex animate-fade-in items-start gap-2.5 rounded-lg bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30">
+      <Icon name="checkCircle" size={16} className="mt-0.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
       <span className="min-w-0 flex-1 leading-relaxed">{message}</span>
     </div>
   );
@@ -56,8 +60,8 @@ export function SuccessBanner({ message }: { message: string }) {
 
 export function InfoBanner({ message }: { message: ReactNode }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-lg bg-blue-50/70 px-3 py-2.5 text-sm text-blue-900 ring-1 ring-inset ring-blue-200/70">
-      <Icon name="info" size={16} className="mt-0.5 shrink-0 text-blue-500" />
+    <div className="flex items-start gap-2.5 rounded-lg bg-blue-50/70 px-3 py-2.5 text-sm text-blue-900 ring-1 ring-inset ring-blue-200/70 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/30">
+      <Icon name="info" size={16} className="mt-0.5 shrink-0 text-blue-500 dark:text-blue-400" />
       <span className="min-w-0 flex-1 leading-relaxed">{message}</span>
     </div>
   );
@@ -76,12 +80,14 @@ export function EmptyState({
 }) {
   return (
     <div className="flex animate-fade-in flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-slate-50 to-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-slate-50 to-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200 dark:from-slate-800 dark:to-slate-800/60 dark:text-slate-500 dark:ring-slate-700">
         <Icon name={icon} size={22} />
       </span>
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-slate-800">{title}</p>
-        {description && <p className="mx-auto max-w-sm text-sm leading-relaxed text-slate-500">{description}</p>}
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</p>
+        {description && (
+          <p className="mx-auto max-w-sm text-sm leading-relaxed text-slate-500 dark:text-slate-400">{description}</p>
+        )}
       </div>
       {action}
     </div>
@@ -98,12 +104,12 @@ export function Skeleton({ className = "" }: { className?: string }) {
 export function TableSkeleton({ rows = 6, cols = 5 }: { rows?: number; cols?: number }) {
   return (
     <div className="px-4 py-3" aria-hidden="true">
-      <div className="flex gap-3 border-b border-slate-100 pb-3">
+      <div className="flex gap-3 border-b border-slate-100 pb-3 dark:border-slate-800">
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} className="h-3 flex-1" />
         ))}
       </div>
-      <div className="divide-y divide-slate-50">
+      <div className="divide-y divide-slate-50 dark:divide-slate-800">
         {Array.from({ length: rows }).map((_, r) => (
           <div key={r} className="flex items-center gap-3 py-3.5" style={{ opacity: 1 - r * 0.11 }}>
             {Array.from({ length: cols }).map((_, c) => (

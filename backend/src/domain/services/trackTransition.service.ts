@@ -108,6 +108,15 @@ export async function recordTrackTransition(input: RecordTransitionInput) {
         currentTrack: input.toTrack,
         currentStage: input.toStage,
         programStatus: input.toProgramStatus,
+        // Ends the current A2/Track B deliverable set (if any), unlocking a
+        // fresh one: either because the track actually changed, or because
+        // a Growth Coach checkpoint evaluation just concluded this round —
+        // including a NOT_SUFFICIENT decision that keeps the student on the
+        // same track/loop but calls for a new, sharper set next (see
+        // assignDeliverable / markDeliverableSetEmailed).
+        ...(fromTrack !== input.toTrack || input.relatedEvaluationType === "GROWTH_COACH_EVALUATION"
+          ? { deliverableEmailSentAt: null, deliverableDeadline: null }
+          : {}),
       },
     }),
   ]);

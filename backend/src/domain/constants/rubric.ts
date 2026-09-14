@@ -11,6 +11,14 @@ export interface RubricDimensionDef {
   mandatory: boolean;
   mandatoryMin: number | null;
   order: number;
+  // What the reviewer is actually checking for on this dimension, plus the
+  // 0-1 / 2-3 / 4-5 score bands — verbatim from the source Project Defence
+  // Plan's "Project & Resume Review Rubric" so reviewers score consistently
+  // without needing the source doc open.
+  whatItEvaluates: string;
+  lowBand: string;
+  midBand: string;
+  highBand: string;
 }
 
 export const PROJECT_REVIEW_RUBRIC_V1: {
@@ -25,16 +33,127 @@ export const PROJECT_REVIEW_RUBRIC_V1: {
   totalMax: 50,
   threshold: 25,
   dimensions: [
-    { key: "RESUME_QUALITY", label: "Resume Quality", maxScore: 5, mandatory: false, mandatoryMin: null, order: 1 },
-    { key: "PROJECT_PRESENCE", label: "Project Presence", maxScore: 5, mandatory: true, mandatoryMin: 3, order: 2 },
-    { key: "PROJECT_DEPTH", label: "Project Depth", maxScore: 5, mandatory: true, mandatoryMin: 3, order: 3 },
-    { key: "TECHNICAL_STACK", label: "Technical Stack", maxScore: 5, mandatory: false, mandatoryMin: null, order: 4 },
-    { key: "PROJECT_OWNERSHIP", label: "Project Ownership", maxScore: 5, mandatory: true, mandatoryMin: 3, order: 5 },
-    { key: "CLAIMS", label: "Claims", maxScore: 5, mandatory: true, mandatoryMin: 3, order: 6 },
-    { key: "GITHUB_EVIDENCE", label: "GitHub / Evidence", maxScore: 5, mandatory: true, mandatoryMin: 3, order: 7 },
-    { key: "DEPLOYMENT", label: "Deployment", maxScore: 5, mandatory: true, mandatoryMin: 2, order: 8 },
-    { key: "ROLE_READINESS", label: "Role Readiness", maxScore: 5, mandatory: false, mandatoryMin: null, order: 9 },
-    { key: "IMMEDIATE_CONCERNS", label: "Immediate Concerns", maxScore: 5, mandatory: true, mandatoryMin: 3, order: 10 },
+    {
+      key: "RESUME_QUALITY",
+      label: "Resume Quality",
+      maxScore: 5,
+      mandatory: false,
+      mandatoryMin: null,
+      order: 1,
+      whatItEvaluates: "Structure, clarity, relevance, and completeness of the resume.",
+      lowBand: "Disorganized, unclear, missing key sections, hard to follow.",
+      midBand: "Reasonably organized but has gaps — inconsistent structure or formatting in places.",
+      highBand: "Clear, well-structured, complete, and easy to follow.",
+    },
+    {
+      key: "PROJECT_PRESENCE",
+      label: "Project Presence",
+      maxScore: 5,
+      mandatory: true,
+      mandatoryMin: 3,
+      order: 2,
+      whatItEvaluates: "Whether there is at least one real, defendable project at all.",
+      lowBand: "No real project — only coursework, tutorials, or copied templates.",
+      midBand: "At least one project exists, but it's minor or largely templated.",
+      highBand: "At least one substantial, original, defendable project is clearly present.",
+    },
+    {
+      key: "PROJECT_DEPTH",
+      label: "Project Depth",
+      maxScore: 5,
+      mandatory: true,
+      mandatoryMin: 3,
+      order: 3,
+      whatItEvaluates: "Whether the project's scope is technically meaningful.",
+      lowBand: "Extremely shallow — a basic CRUD app or tutorial-level build with no real complexity.",
+      midBand: "Some genuine complexity, but the scope is narrow or mostly boilerplate.",
+      highBand: "Meaningful technical scope — real problem-solving, not just following a guide.",
+    },
+    {
+      key: "TECHNICAL_STACK",
+      label: "Technical Stack",
+      maxScore: 5,
+      mandatory: false,
+      mandatoryMin: null,
+      order: 4,
+      whatItEvaluates: "The technologies claimed, and whether they're relevant to the project.",
+      lowBand: "Technologies listed don't match the project, or seem irrelevant/inflated.",
+      midBand: "Mostly relevant, but some claims seem exaggerated or unclear.",
+      highBand: "Clearly relevant, appropriate for the project, and consistent with what's described.",
+    },
+    {
+      key: "PROJECT_OWNERSHIP",
+      label: "Project Ownership",
+      maxScore: 5,
+      mandatory: true,
+      mandatoryMin: 3,
+      order: 5,
+      whatItEvaluates: "Evidence of the student's actual contribution to the project.",
+      lowBand: "No clear evidence the student built this — can't separate their work from a team's or a template's.",
+      midBand: "Some evidence of contribution, but ownership is unclear or only partially explained.",
+      highBand: "Clear, specific evidence the student built this themselves (or their exact part, if a team project).",
+    },
+    {
+      key: "CLAIMS",
+      label: "Claims",
+      maxScore: 5,
+      mandatory: true,
+      mandatoryMin: 3,
+      order: 6,
+      whatItEvaluates: "Whether quantitative/impact claims on the resume appear defensible.",
+      lowBand: "Specific numbers or impact claims appear fabricated or wildly implausible.",
+      midBand: "Claims exist but lack a clear basis or method behind them.",
+      highBand: "Claims are specific, reasonable, and appear defensible.",
+    },
+    {
+      key: "GITHUB_EVIDENCE",
+      label: "GitHub / Evidence",
+      maxScore: 5,
+      mandatory: true,
+      mandatoryMin: 3,
+      order: 7,
+      whatItEvaluates: "Availability of supporting evidence for the project.",
+      lowBand: "No supporting evidence available anywhere — no repo, no links, nothing to check.",
+      midBand: "Some evidence exists but is incomplete, inactive, or hard to verify.",
+      highBand: "Clear, accessible evidence (e.g. an active repo) supporting what's claimed.",
+    },
+    {
+      key: "DEPLOYMENT",
+      label: "Deployment",
+      maxScore: 5,
+      mandatory: true,
+      mandatoryMin: 2,
+      order: 8,
+      whatItEvaluates: "Whether the project can actually be demonstrated, where applicable.",
+      lowBand: "Not deployed and nothing to demonstrate, where deployment would reasonably be expected.",
+      midBand: "Partially demonstrable — e.g. runs locally only, or a broken/incomplete live version.",
+      highBand: "Fully working and demonstrable, or deployment genuinely isn't applicable to this project type.",
+    },
+    {
+      key: "ROLE_READINESS",
+      label: "Role Readiness",
+      maxScore: 5,
+      mandatory: false,
+      mandatoryMin: null,
+      order: 9,
+      whatItEvaluates: "Alignment between the resume and the technical roles the program is preparing students for.",
+      lowBand: "Resume doesn't align with the target technical roles.",
+      midBand: "Some alignment, but gaps in the relevant skill areas.",
+      highBand: "Strong alignment between resume and the target technical roles.",
+    },
+    {
+      key: "IMMEDIATE_CONCERNS",
+      label: "Immediate Concerns",
+      maxScore: 5,
+      mandatory: true,
+      mandatoryMin: 3,
+      order: 10,
+      whatItEvaluates:
+        "Any urgent red flags across the whole review — scored in reverse: fewer concerns means a higher score.",
+      lowBand: "Serious concerns present — e.g. suspected fabrication, plagiarism, or completely unclear ownership.",
+      midBand: "Minor concerns present — small inconsistencies or unclear points worth flagging.",
+      highBand: "No meaningful concerns identified.",
+    },
   ],
 };
 

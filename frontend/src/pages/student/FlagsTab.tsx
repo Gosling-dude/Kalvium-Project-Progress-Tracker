@@ -82,7 +82,7 @@ function CreateFlagForm({ studentId, onDone }: { studentId: string; onDone: () =
   });
 
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4">
+    <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4 dark:border-rose-500/30 dark:bg-rose-500/5">
       {error && <div className="mb-2"><ErrorBanner message={error} /></div>}
       <div className="space-y-3">
         <div className="flex gap-3">
@@ -139,7 +139,7 @@ function FlagRow({ flag, isAdmin, onChanged }: { flag: Flag; isAdmin: boolean; o
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <span className="min-w-0 font-medium text-slate-900">{flag.title}</span>
+        <span className="min-w-0 font-medium text-slate-900 dark:text-slate-100">{flag.title}</span>
         <div className="flex shrink-0 items-center gap-2">
           <SeverityBadge severity={flag.severity} />
           <Badge tone={flag.status === "OPEN" ? "danger" : "success"} dot>
@@ -147,14 +147,14 @@ function FlagRow({ flag, isAdmin, onChanged }: { flag: Flag; isAdmin: boolean; o
           </Badge>
         </div>
       </div>
-      <p className="mt-1.5 leading-relaxed text-slate-600">{flag.description}</p>
-      <p className="mt-2 text-xs text-slate-400">
+      <p className="mt-1.5 leading-relaxed text-slate-600 dark:text-slate-400">{flag.description}</p>
+      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
         {flag.category.replace(/_/g, " ")} · raised by {flag.createdBy?.name} on {new Date(flag.createdAt).toLocaleDateString()}
         {flag.assignedTo && ` · assigned to ${flag.assignedTo.name}`}
       </p>
       {flag.status === "OPEN" ? (
         isAdmin && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
             <Input className="max-w-xs" placeholder="Resolution note" value={note} onChange={(e) => setNote(e.target.value)} />
             <Button size="sm" variant="secondary" icon="check" onClick={() => mutation.mutate()} loading={mutation.isPending} disabled={!note}>
               Resolve
@@ -162,8 +162,8 @@ function FlagRow({ flag, isAdmin, onChanged }: { flag: Flag; isAdmin: boolean; o
           </div>
         )
       ) : (
-        <p className="mt-2 flex items-start gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-800 ring-1 ring-inset ring-emerald-100">
-          <Icon name="checkCircle" size={13} className="mt-px shrink-0 text-emerald-500" />
+        <p className="mt-2 flex items-start gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-800 ring-1 ring-inset ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30">
+          <Icon name="checkCircle" size={13} className="mt-px shrink-0 text-emerald-500 dark:text-emerald-400" />
           <span>Resolved: {flag.resolutionNote}</span>
         </p>
       )}

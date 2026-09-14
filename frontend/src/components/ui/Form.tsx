@@ -16,7 +16,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 flex items-center gap-1 text-sm font-medium text-slate-700">
+      <span className="mb-1.5 flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
         {label}
         {required && (
           <span className="text-rose-500" aria-hidden="true">
@@ -25,9 +25,9 @@ export function Field({
         )}
       </span>
       {children}
-      {hint && !error && <span className="mt-1.5 block text-xs leading-relaxed text-slate-500">{hint}</span>}
+      {hint && !error && <span className="mt-1.5 block text-xs leading-relaxed text-slate-500 dark:text-slate-400">{hint}</span>}
       {error && (
-        <span className="mt-1.5 flex items-start gap-1 text-xs font-medium text-rose-600">
+        <span className="mt-1.5 flex items-start gap-1 text-xs font-medium text-rose-600 dark:text-rose-400">
           <Icon name="alert" size={12} className="mt-0.5" />
           {error}
         </span>
@@ -39,7 +39,7 @@ export function Field({
 // One control surface shared by input/textarea/select so they line up pixel for
 // pixel: same ring, same focus treatment, same disabled and invalid states.
 const controlClass =
-  "block w-full rounded-md border-0 bg-white text-sm text-slate-900 shadow-xs ring-1 ring-inset ring-slate-300 transition-shadow duration-150 placeholder:text-slate-400 hover:ring-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 disabled:ring-slate-200 aria-[invalid=true]:ring-rose-400 aria-[invalid=true]:focus:ring-rose-500";
+  "block w-full rounded-md border-0 bg-white text-sm text-slate-900 shadow-xs ring-1 ring-inset ring-slate-300 transition-shadow duration-150 placeholder:text-slate-400 hover:ring-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 disabled:ring-slate-200 aria-[invalid=true]:ring-rose-400 aria-[invalid=true]:focus:ring-rose-500 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600 dark:placeholder:text-slate-500 dark:hover:ring-slate-500 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500 dark:disabled:ring-slate-700";
 
 const inputSizeClass = "h-9 px-3 py-1.5";
 
@@ -59,7 +59,7 @@ export function InputWithIcon({
       <Icon
         name={icon}
         size={15}
-        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
       />
       <input {...props} className={`${controlClass} h-9 py-1.5 pl-9 pr-3 ${className}`} />
     </div>
@@ -102,11 +102,11 @@ export function Checkbox({
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & { label: ReactNode }) {
   return (
-    <label className={`flex cursor-pointer select-none items-start gap-2.5 text-sm text-slate-700 ${className}`}>
+    <label className={`flex cursor-pointer select-none items-start gap-2.5 text-sm text-slate-700 dark:text-slate-300 ${className}`}>
       <input
         type="checkbox"
         {...props}
-        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-brand-600 shadow-xs transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-0"
+        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-brand-600 shadow-xs transition-colors focus:ring-2 focus:ring-brand-500 focus:ring-offset-0 dark:border-slate-600 dark:bg-slate-800"
       />
       <span>{label}</span>
     </label>
